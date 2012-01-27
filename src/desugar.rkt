@@ -1,15 +1,22 @@
-#lang s-exp "lang.ss"
+#lang racket/base
 
-(define pair? cons?)
+(require "helpers.rkt"
+         "pinfo.rkt"
+         "env.rkt"
+         "modules.rkt"
+         "rbtree.rkt"
+         "stx.rkt"
+         "error-struct.rkt"
+         racket/local
+         racket/contract)
 
-(require "helpers.ss")
-(require "pinfo.ss")
-(require "env.ss")
-(require "modules.ss")
-(require "rbtree.ss")
-(require "../collects/moby/runtime/stx.ss")
-(require "../collects/moby/runtime/error-struct.ss")
-
+(define false #f)
+(define first car)
+(define rest cdr)
+(define second cadr)
+(define third caddr)
+(define empty? null?)
+(define empty '())
 
 ;; FIXME: this whole process is non-hygienic macro expansion.
 
@@ -441,10 +448,10 @@
        (local [(define boolean-chain-stx (first (stx-e expr)))
                (define exprs (rest (stx-e expr)))
                (define desugared-exprs+pinfo (desugar-expressions exprs pinfo))]
-         (cond [(symbol=? (stx-e boolean-chain-stx) 'and)
+         (cond [(eq? (stx-e boolean-chain-stx) 'and)
                 (list (desugar-and (first desugared-exprs+pinfo) (stx-loc expr))
                       (second desugared-exprs+pinfo))]
-               [(symbol=? (stx-e boolean-chain-stx) 'or)
+               [(eq? (stx-e boolean-chain-stx) 'or)
                 (desugar-or (first desugared-exprs+pinfo) 
                             (stx-loc expr) 
                             (second desugared-exprs+pinfo))]))])))
@@ -644,7 +651,7 @@
      (define (loop list-of-datum answers datum-last answer-last)
        (cond
          [(empty? list-of-datum)
-          (if (and (symbol? (stx-e datum-last)) (symbol=? 'else (stx-e datum-last)))
+          (if (and (symbol? (stx-e datum-last)) (eq? 'else (stx-e datum-last)))
               answer-last
               (datum->stx #f (list (datum->stx #f 'if (stx-loc an-expr))
                                    (datum->stx #f (list (datum->stx #f 'ormap (stx-loc an-expr))

@@ -1,15 +1,23 @@
-#lang s-exp "lang.ss"
+#lang racket/base
 
-(define pair? cons?)
+(require "env.rkt"
+         "pinfo.rkt"
+         "helpers.rkt"
+         "rbtree.rkt"
+         "permission-struct.rkt"
+         "binding.rkt"
+         "stx.rkt"
+         "error-struct.rkt"
+         racket/local
+         racket/contract)
 
-(require "env.ss")
-(require "pinfo.ss")
-(require "helpers.ss")
-(require "rbtree.ss")
-(require "../collects/moby/runtime/permission-struct.ss")
-(require "../collects/moby/runtime/binding.ss")
-(require "../collects/moby/runtime/stx.ss")
-(require "../collects/moby/runtime/error-struct.ss")
+(define true #t)
+(define false #f)
+(define empty '())
+(define rest cdr)
+(define second cadr)
+(define third caddr)
+(define fourth cadddr)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

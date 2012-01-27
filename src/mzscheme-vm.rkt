@@ -1,34 +1,29 @@
-#lang scheme/base
+#lang racket/base
 
 ;; This program translates advanced-level Scheme into mzscheme-vm's bytecode.
 
-(require scheme/local
-         scheme/bool
-         scheme/contract
-         scheme/match
-         (only-in scheme/list empty first second third fourth empty? rest))
+(require racket/local
+         racket/bool
+         racket/contract
+         racket/match
+         "desugar.rkt"
+         "analyzer.rkt"
+         "rbtree.rkt"
+         "helpers.rkt"
+         "pinfo.ss"
+         "stx.rkt"
+         "mz-env.rkt"
+         (prefix-in binding: "binding.rkt")
+         (prefix-in bcode: "bytecode-structs.rkt"))
 
 
-(require "../desugar.ss")
-(require "../analyzer.ss")
-(require "../rbtree.ss")
-(require (prefix-in binding: "../../collects/moby/runtime/binding.ss"))
-
-
-
-(require "../helpers.ss"
-         
-         "../pinfo.ss"
-         "../../collects/moby/runtime/stx.ss"
-         
-         "env.ss")
-
-(require 
- (prefix-in bcode: 
-            "../../../support/externals/mzscheme-vm/src/bytecode-structs.ss"))
-
-
-
+(define first car)
+(define second cadr)
+(define third caddr)
+(define fourth cadddr)
+(define rest cdr)
+(define empty '())
+(define empty? null?)
 
 (provide/contract [compile-compilation-top
                    (program? pinfo? #:name symbol? . -> . 
