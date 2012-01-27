@@ -1,18 +1,21 @@
-#lang s-exp "lang.ss"
+#lang racket/base
 
-(define pair? cons?)
-
-(require "rbtree.ss")
-(require "helpers.ss")
-(require "../collects/moby/runtime/stx.ss")
-(require "../collects/moby/runtime/error-struct.ss")
-(require "../collects/moby/runtime/binding.ss")
-
+(require "rbtree.rkt"
+         "helpers.rkt"
+         "stx.rkt"
+         "error-struct.rkt"
+         "binding.rkt"
+         racket/local
+         racket/bool
+         racket/contract)
 
 ;; An env collects a set of bindings.
 (define-struct env (bindings))
 (define empty-env (make-env empty-rbtree))
 
+
+(define first car)
+(define second cadr)
 
 
 ;; env-extend: env binding -> env
@@ -40,9 +43,9 @@
 (define (env-lookup an-env name)
   (local [(define result (rbtree-lookup symbol< (env-bindings an-env) name))]
     (cond [(pair? result)
-           (second result)]
+           (cadr result)]
           [else
-           false])))
+           #f])))
 
 
 ;; env-contains?: env symbol -> boolean
@@ -63,7 +66,7 @@
 ;; Extends the environment with a new constant binding.
 (define (env-extend-constant an-env id module-source)
   (env-extend an-env
-              (make-binding:constant id module-source empty)))
+              (make-binding:constant id module-source '())))
 
 
 ;; env-extend-function: env symbol (or/c string false) number boolean? string? -> env
@@ -74,8 +77,8 @@
                                      module-source
                                      min-arity 
                                      var-arity?
-                                     empty
-                                     false)))
+                                     '()
+                                     #f)))
 
 
 ;; env-lookup/context: identifier-stx -> (binding | false)

@@ -1,15 +1,25 @@
-#lang s-exp "lang.ss"
+#lang racket/base
 
-(require "env.ss")
-(require "toplevel.ss")
-(require "helpers.ss")
-(require "modules.ss")
-(require "rbtree.ss")
-(require "labeled-translation.ss")
-(require "../collects/moby/runtime/error-struct.ss")
-(require "../collects/moby/runtime/permission-struct.ss")
-(require "../collects/moby/runtime/binding.ss")
-(require "../collects/moby/runtime/stx.ss")
+(require "env.rkt"
+         "toplevel.rkt"
+         "helpers.rkt"
+         "modules.rkt"
+         "rbtree.rkt"
+         "labeled-translation.rkt"
+         "error-struct.rkt"
+         "permission-struct.rkt"
+         "binding.rkt"
+         "stx.rkt"
+         racket/local
+         racket/contract)
+
+(define empty '())
+(define true #t)
+(define false #f)
+(define first car)
+(define rest cdr)
+(define second cadr)
+(define empty? null?)
 
 
 ;; pinfo (program-info) is the "world" structure for the compilers; 
@@ -465,11 +475,11 @@
 ;; 'moby
 (define (get-base-pinfo language)
   (cond
-    [(symbol=? language 'moby)
+    [(eq? language 'moby)
      (pinfo-update-env empty-pinfo
                        (extend-env/module-binding (get-toplevel-env language)
                                                   moby-module-binding))]
-    [(symbol=? language 'base)
+    [(eq? language 'base)
      (pinfo-update-env empty-pinfo
                        (get-toplevel-env language))]))
 
@@ -543,7 +553,7 @@
             (binding-update-permissions a-binding
                                         (map second
                                              (filter (lambda (entry)
-                                                       (symbol=? (first entry)
+                                                       (eq? (first entry)
                                                                  (binding-id a-binding)))
                                                      (pinfo-declared-permissions a-pinfo)))))
 

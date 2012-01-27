@@ -1,8 +1,6 @@
-#lang s-exp "lang.ss"
+#lang racket/base
 
 ;; Hardcoded modules known by Moby.
-
-
 
 ;; FIXME: many of these bindings should not be hardcoded here; a module should be self-describing
 ;; in terms of what bindings it provides.
@@ -12,14 +10,19 @@
 ;; definition of MOBY-RUNTIME-MODULES.  We just have to continue this work.
 
 
-(require "env.ss")
-(require "helpers.ss")
+(require "env.rkt"
+         "helpers.rkt"
+         "permission-struct.rkt"
+         "binding.rkt"
+         racket/local
+         racket/contract)
 
-(require "../collects/moby/runtime/permission-struct.ss")
-(require "../collects/moby/runtime/binding.ss")
-;(require "../collects/moby/runtime/runtime-modules.ss")
-
-
+(define false #f)
+(define true #t)
+(define first car)
+(define rest cdr)
+(define empty '())
+(define empty? null?)
 
 
 (define kernel-misc-module
@@ -597,8 +600,8 @@
             (cond
               [(empty? modules)
                false]
-              [(symbol=? (module-binding-name (first modules))
-                         a-name)
+              [(eq? (module-binding-name (first modules))
+                    a-name)
                (first modules)]
               [else
                (loop (rest modules))]))]

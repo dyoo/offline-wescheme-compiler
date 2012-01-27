@@ -1,18 +1,20 @@
-#lang s-exp "lang.ss"
+#lang racket/base
 
-(require "rbtree.ss")
-(require "../collects/moby/runtime/stx.ss")
-(require "../collects/moby/runtime/error-struct.ss")
+(require "rbtree.rkt"
+         "stx.rkt"
+         "error-struct.rkt"
+         racket/bool
+         racket/local
+         racket/contract)
 
-(define pair? cons?)
 
 ;; A program is a (listof (or/c defn? expr? library-require? provide-statement? require-permission?))
 
 (define (list? datum)
-  (or (empty? datum)
+  (or (null? datum)
       (and
        (pair? datum)
-       (list? (rest datum)))))
+       (list? (cdr datum)))))
 
 
 ;; symbol<: symbol symbol -> boolean
@@ -55,7 +57,7 @@
            (ormap expression<? (stx-e x) (stx-e y))]
           [else
            false])]
-       [(empty? (stx-e x))
+       [(null? (stx-e x))
         false])]
     [else
      false]))
@@ -75,7 +77,7 @@
      3]
     [(symbol? (stx-e x))
      4]
-    [(empty? (stx-e x))
+    [(null? (stx-e x))
      5]
     [(pair? (stx-e x))
      6]))
@@ -134,34 +136,42 @@
 ;; string-join: (listof string) string -> string
 (define (string-join strs delim)
   (cond
-    [(empty? strs)
+    [(null? strs)
      ""]
-    [(empty? (rest strs))
-     (first strs)]
+    [(null? (cdr strs))
+     (car strs)]
     [else
      (string-append
-      (first strs)
+      (car strs)
       delim
-      (string-join (rest strs) delim))]))
+      (string-join (cdr strs) delim))]))
+
+
+(define (second x)
+  (cadr x))
+
+(define (third x)
+  (caddr x))
+
 
 
 ;; string-split: string char -> (listof string)
 (define (string-split a-str delim)
   (local [(define (add-word acc)
             (list (cons (list->string (reverse (second acc)))
-                        (first acc))
-                  empty))
+                        (car acc))
+                  '()))
           (define (accumulate-character acc ch)
-            (list (first acc)
+            (list (car acc)
                   (cons ch (second acc))))]
-    (reverse (first
+    (reverse (car
               (add-word
                (foldl (lambda (ch acc)
                         (cond [(char=? ch delim)
                                (add-word acc)]
                               [else
                                (accumulate-character acc ch)]))
-                      (list empty empty)
+                      (list '() '())
                       (string->list a-str)))))))
 
 
@@ -203,7 +213,7 @@
 ;; special-character-mappings: (rbtreeof char string)
 (define special-character-mappings
   (foldl (lambda (ch+translation an-rbtree)
-           (rbtree-insert char<? an-rbtree (first ch+translation) (second ch+translation)))
+           (rbtree-insert char<? an-rbtree (car ch+translation) (second ch+translation)))
          empty-rbtree
          '((#\- "_dash_")
            (#\_ "_underline_")
@@ -230,7 +240,7 @@
 ;; Special character mappings for identifiers.
 (define (translate-special-character ch)
   (cond
-    [(cons? (rbtree-lookup char<? special-character-mappings ch))
+    [(pair? (rbtree-lookup char<? special-character-mappings ch))
      (second (rbtree-lookup char<? special-character-mappings ch))]
     [else
      (string ch)]))
@@ -239,12 +249,12 @@
 ;; identifier->munged-java-identifier: symbol -> symbol
 (define (identifier->munged-java-identifier an-id)
   (cond
-    [(cons? (rbtree-lookup symbol< java-identifiers an-id))
+    [(pair? (rbtree-lookup symbol< java-identifiers an-id))
      (string->symbol (string-append "_" (symbol->string an-id) "_"))]
     [else
      (local [(define (maybe-prepend-hyphen chars)
                (cond
-                 [(member (first chars) (string->list "0123456789"))
+                 [(member (car chars) (string->list "0123456789"))
                   (cons #\- chars)]
                  [else
                   chars]))
@@ -263,10 +273,10 @@
 ;; Removes leading whitespace from a list of characters.
 (define (remove-leading-whitespace/list chars)
   (cond
-    [(empty? chars)
+    [(null? chars)
      ""]
-    [(char-whitespace? (first chars))
-     (remove-leading-whitespace/list (rest chars))]
+    [(char-whitespace? (car chars))
+     (remove-leading-whitespace/list (cdr chars))]
     [else
      (list->string chars)]))
 
@@ -278,14 +288,14 @@
 
 
 ;; take: (listof X) number -> (listof X)
-;; Produces a list of the first n elmeents of a-list.
+;; Produces a list of the car n elmeents of a-list.
 (define (take a-list n)
   (cond
     [(= n 0)
-     empty]
+     '()]
     [else
-     (cons (first a-list)
-           (take (rest a-list) (sub1 n)))]))
+     (cons (car a-list)
+           (take (cdr a-list) (sub1 n)))]))
 
 
 ;; list-tail: (listof X) number -> (listof X)
@@ -295,7 +305,7 @@
     [(= n 0)
      a-list]
     [else
-     (list-tail (rest a-list)
+     (list-tail (cdr a-list)
                 (sub1 n))]))
 
 
@@ -304,7 +314,7 @@
 (define (range n)
   (cond
     [(= n 0)
-     empty]
+     '()]
     [else
      (append (range (sub1 n))
              (list (sub1 n)))]))
@@ -330,11 +340,11 @@
     [(and (stx-begins-with? a-definition 'define)
           (= (length (stx-e a-definition)) 3)
           (stx-list-of-symbols? (second (stx-e a-definition))))
-     (local [(define id (first (stx-e (second (stx-e a-definition)))))
-             (define args (rest (stx-e (second (stx-e a-definition)))))
+     (local [(define id (car (stx-e (second (stx-e a-definition)))))
+             (define args (cdr (stx-e (second (stx-e a-definition)))))
              (define body (third (stx-e a-definition)))]
        (begin
-         (check-single-body-stx! (rest (rest (stx-e a-definition))) a-definition)
+         (check-single-body-stx! (cdr (cdr (stx-e a-definition))) a-definition)
          (f-function id args body)))]
     
     
@@ -347,7 +357,7 @@
              (define args (stx-e (second (stx-e (third (stx-e a-definition))))))
              (define body (third (stx-e (third (stx-e a-definition)))))]
        (begin
-         (check-single-body-stx! (rest (rest (stx-e (third (stx-e a-definition))))) a-definition)
+         (check-single-body-stx! (cdr (cdr (stx-e (third (stx-e a-definition))))) a-definition)
          (f-function id args body)))]
     
     ;; (define id body)
@@ -363,7 +373,7 @@
     [(and (stx-begins-with? a-definition 'define-struct)
           (= (length (stx-e a-definition)) 3)
           (symbol? (stx-e (second (stx-e a-definition))))
-          (or (empty? (stx-e (third (stx-e a-definition))))
+          (or (null? (stx-e (third (stx-e a-definition))))
               (pair? (stx-e (third (stx-e a-definition))))))
      (local [(define id (second (stx-e a-definition)))
              (define fields (stx-e (third (stx-e a-definition))))]
@@ -424,21 +434,21 @@
           
           (define (loop ids)
             (cond
-              [(empty? ids)
+              [(null? ids)
                (void)]
               [else
-               (cond [(stx? (hash-ref seen-ids (stx-e (first ids)) #f))
-                      (raise (make-moby-error (stx-loc (first ids))
+               (cond [(stx? (hash-ref seen-ids (stx-e (car ids)) #f))
+                      (raise (make-moby-error (stx-loc (car ids))
                                               (make-moby-error-type:duplicate-identifier
-                                               (stx-e (first ids))
-                                               (stx-loc (hash-ref seen-ids (stx-e (first ids)) #f)))))]
-                     [(not (symbol? (stx-e (first ids))))
-                      (raise (make-moby-error (stx-loc (first ids))
-                                              (make-moby-error-type:expected-identifier (first ids))))]
+                                               (stx-e (car ids))
+                                               (stx-loc (hash-ref seen-ids (stx-e (car ids)) #f)))))]
+                     [(not (symbol? (stx-e (car ids))))
+                      (raise (make-moby-error (stx-loc (car ids))
+                                              (make-moby-error-type:expected-identifier (car ids))))]
                      [else
                       (begin
-                        (hash-set! seen-ids (stx-e (first ids)) (first ids))
-                        (loop (rest ids)))])]))]
+                        (hash-set! seen-ids (stx-e (car ids)) (car ids))
+                        (loop (cdr ids)))])]))]
     (loop ids)))
 
 
@@ -446,18 +456,18 @@
 ;; check-single-body-stx!: (listof stx) stx -> void
 (define (check-single-body-stx! stxs original-stx)
   (cond
-    [(empty? stxs)
+    [(null? stxs)
      (raise
       (make-moby-error (stx-loc original-stx)
                        (make-moby-error-type:generic-syntactic-error
                         "I expected a single body in this expression, but I didn't find any."
                         (list))))]
-    [(not (empty? (rest stxs)))
+    [(not (null? (cdr stxs)))
      (raise
       (make-moby-error (stx-loc original-stx)
                        (make-moby-error-type:generic-syntactic-error
                         "I expected a single body in this expression, but I found more than one."
-                        (map stx-loc (rest stxs)))))]
+                        (map stx-loc (cdr stxs)))))]
     [else
      (void)]))
 
@@ -467,11 +477,11 @@
   (local ([define (loop lst i)
             
             (cond
-              [(empty? lst)
-               empty]
+              [(null? lst)
+               '()]
               [else
-               (cons (f (first lst) i)
-                     (loop (rest lst) (add1 i)))])])
+               (cons (f (car lst) i)
+                     (loop (cdr lst) (add1 i)))])])
     (loop lst 0)))
 
 
