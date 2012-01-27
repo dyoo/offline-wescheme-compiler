@@ -1,5 +1,7 @@
-#lang s-exp "../../../private/restricted-runtime-scheme.ss"
-
+#lang racket/base
+(require racket/contract
+         racket/list
+         racket/bool)
 
 ;; Syntax objects
 (define-struct stx:atom (datum loc context))
