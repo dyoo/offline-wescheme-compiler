@@ -1,6 +1,9 @@
-#lang s-exp "../../../private/restricted-runtime-scheme.ss"
+#lang racket/base
 
-(require "permission-struct.ss")
+(require "permission-struct.rkt"
+         racket/list
+         racket/bool
+         racket/contract)
 
 
 ;; binding:constant records an id and its associated Java implementation.
