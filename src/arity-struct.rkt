@@ -1,4 +1,9 @@
-#lang s-exp "../../../private/restricted-runtime-scheme.ss"
+#lang racket/base
+
+(require racket/contract
+         racket/bool
+         racket/list
+         racket/local)
 
 ;; Represents the arities available to a function.
 

@@ -1,7 +1,8 @@
-#lang s-exp "../../../private/restricted-runtime-scheme.ss"
+#lang racket/base
 
-(require "stx.ss")
-(require "arity-struct.ss")
+(require racket/contract
+         "stx.rkt"
+         "arity-struct.rkt")
 
 (define-struct moby-error (location error-type))
 
