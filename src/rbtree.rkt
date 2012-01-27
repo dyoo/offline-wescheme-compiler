@@ -1,4 +1,9 @@
-#lang s-exp "lang.ss"
+#lang racket/base
+
+(require racket/contract
+         racket/bool
+         racket/local
+         racket/list)
 
 ;; Red black trees.
 ;; Most of this comes from the code in:
