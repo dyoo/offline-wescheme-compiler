@@ -414,7 +414,7 @@
   (match a-seq
     [(struct req (path toplevel))
      (make-ht 'req 
-              `((reqs ,(make-lit (syntax->datum path)))
+              `((reqs ,(make-lit path))
 		(dummy ,(compile-toplevel toplevel))))]))
 
 

@@ -162,7 +162,7 @@
 
 
 ;; Top-level `require'
-(define-form-struct (req form) ([reqs syntax?] [dummy toplevel?]))
+(define-form-struct (req form) ([reqs any/c] [dummy toplevel?]))
 
 (define-form-struct (lexical-rename wrap) ([bool1 boolean?] ; this needs a name
                                            [bool2 boolean?] ; this needs a name

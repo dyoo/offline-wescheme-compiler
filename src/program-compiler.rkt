@@ -1,4 +1,4 @@
-#lang racket/base
+#lang planet dyoo/whalesong
 
 ;; This program translates advanced-level Scheme into mzscheme-vm's bytecode.
 
@@ -9,6 +9,7 @@
          "pinfo.ss"
          "stx.rkt"
          "mz-env.rkt"
+         "module-path-stub.rkt"
          (prefix-in binding: "binding.rkt")
          (prefix-in bcode: "bytecode-structs.rkt"))
 
@@ -181,7 +182,7 @@
 (define (compile-require a-require a-pinfo)
   ;; FIXME: I should be doing some kind of module resolution here.
   (values (bcode:make-req
-           (datum->syntax #f (stx->datum (second (stx-e a-require))))
+           (stx->datum (second (stx-e a-require)))
            (bcode:make-toplevel 0 0 #f #f))
           a-pinfo))
 
@@ -292,7 +293,7 @@
      (values (stx-e expr) a-pinfo)]
     
     ;; Bytes
-    [(bytes? (stx-e expr))
+    #;[(bytes? (stx-e expr))
      (values (stx-e expr) a-pinfo)]
     
     ;; Literal booleans
@@ -305,7 +306,7 @@
     
     
     ;; Paths
-    [(path? (stx-e expr))
+    #;[(path? (stx-e expr))
      (values (stx-e expr) a-pinfo)]
     
     ;; Boxes
@@ -313,12 +314,12 @@
      (values (stx-e expr) a-pinfo)]
     
     ;; Regexps
-    [(regexp? (stx-e expr))
+    #;[(regexp? (stx-e expr))
      (values (stx-e expr) a-pinfo)]
     
     
     ;; Byte regexps
-    [(byte-regexp? (stx-e expr))
+    #;[(byte-regexp? (stx-e expr))
      (values (stx-e expr) a-pinfo)]))
 
 
