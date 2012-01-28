@@ -111,17 +111,18 @@
                             (cons a-binding acc)]
                            [else acc]))
                        '())])
-
+    
     (values (bcode:make-prefix 0 (append (list #f)
                                          (map bcode:make-global-bucket free-variables)
                                          (map bcode:make-global-bucket local-defined-names)
                                          (map (lambda (binding) 
-                                                (bcode:make-module-variable (module-path-index-join 
-                                                                             (binding:binding-module-source binding) 
-                                                                             (module-path-index-join #f #f))
-                                                                            (binding:binding-id binding)
-                                                                            -1
-                                                                            0))
+                                                (bcode:make-module-variable 
+                                                 (module-path-index-join 
+                                                  (binding:binding-module-source binding) 
+                                                  (module-path-index-join #f #f))
+                                                 (binding:binding-id binding)
+                                                 -1
+                                                 0))
                                               (append required-module-bindings
                                                       module-or-toplevel-defined-bindings)))
                                '())
@@ -279,7 +280,7 @@
      (compile-application-expression/stack-record (stx-loc expr)
                                                   operator
                                                   operands env a-pinfo)]
-
+    
     ;; Regular data are just themselves in the emitted bytecode.
     
     ;; Numbers
@@ -293,7 +294,7 @@
     ;; Bytes
     [(bytes? (stx-e expr))
      (values (stx-e expr) a-pinfo)]
-
+    
     ;; Literal booleans
     [(boolean? (stx-e expr))
      (values (stx-e expr) a-pinfo)]
@@ -301,12 +302,12 @@
     ;; Characters
     [(char? (stx-e expr))
      (values (stx-e expr) a-pinfo)]
-
-
+    
+    
     ;; Paths
     [(path? (stx-e expr))
      (values (stx-e expr) a-pinfo)]
-
+    
     ;; Boxes
     [(box? (stx-e expr))
      (values (stx-e expr) a-pinfo)]
@@ -314,8 +315,8 @@
     ;; Regexps
     [(regexp? (stx-e expr))
      (values (stx-e expr) a-pinfo)]
-
-
+    
+    
     ;; Byte regexps
     [(byte-regexp? (stx-e expr))
      (values (stx-e expr) a-pinfo)]))
@@ -375,7 +376,7 @@
                (error 'compile-identifier-expression 
                       (format "Couldn't find ~a in the environment" 
                               name))])
-    pinfo)))
+            pinfo)))
 
 
 
@@ -455,7 +456,7 @@
                               (cond 
                                 [(local-stack-reference-boxed? ref)
                                  (env-push-local/boxed env 
-                                                 (local-stack-reference-name ref))]
+                                                       (local-stack-reference-name ref))]
                                 [else
                                  (env-push-local env 
                                                  (local-stack-reference-name ref))]))
@@ -543,7 +544,7 @@
                                            (env-push-local/boxed env (stx-e id)))
                                          env 
                                          (reverse defined-names))])
-
+       
        (let-values
            ([(let-void-body pinfo)
              (let loop ([defns defns]
@@ -604,7 +605,7 @@
                                                              rhs
                                                              new-body)
                                    pinfo))))]))])
-       
+         
          (values (bcode:make-let-void 
                   (length defined-names)
                   #t
@@ -702,9 +703,9 @@
                                                                          (lambda (ids body)
                                                                            (loop body updated-env))))
                                               defns))))]
-                              
-                              
-
+                       
+                       
+                       
                        
                        
                        ;; (set! identifier value)

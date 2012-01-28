@@ -1,5 +1,6 @@
-#lang racket/base
+#lang planet dyoo/whalesong
 
+(require (for-syntax racket/base))
 #| Unresolved issues
 
   what are the booleans in lexical-rename?
@@ -53,7 +54,7 @@
 (define-form-struct (expr form) ())
 
 ;; A static closure can refer directly to itself, creating a cycle
-(define-struct indirect ([v #:mutable]) #:transparent)
+(define-struct indirect ([v]) #:mutable #:transparent)
 
 (define-form-struct compilation-top ([max-let-depth exact-nonnegative-integer?] [prefix prefix?] [code (or/c form? indirect? any/c)])) ; compiled code always wrapped with this
 
@@ -139,7 +140,12 @@
 (define-form-struct (varref expr) ([toplevel toplevel?])) ; `#%variable-reference'
 (define-form-struct (assign expr) ([id toplevel?] [rhs (or/c expr? seq? indirect? any/c)] [undef-ok? boolean?])) ; top-level or module-level set!
 (define-form-struct (apply-values expr) ([proc (or/c expr? seq? indirect? any/c)] [args-expr (or/c expr? seq? indirect? any/c)])) ; `(call-with-values (lambda () ,args-expr) ,proc)
-(define-form-struct (primval expr) ([id exact-nonnegative-integer?])) ; direct preference to a kernel primitive
+
+
+
+
+;; Commenting out primval: my compiler will not be producing this.
+#;(define-form-struct (primval expr) ([id exact-nonnegative-integer?])) ; direct preference to a kernel primitive
 
 
 
