@@ -1,4 +1,4 @@
-#lang racket/base
+#lang planet dyoo/whalesong
 
 (require "permission-struct.rkt")
 (define first car)

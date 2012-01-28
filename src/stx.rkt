@@ -1,9 +1,9 @@
-#lang racket/base
+#lang planet dyoo/whalesong
 
 (define first car)
 (define second cadr)
-(define third caddr)
-(define fourth cadddr)
+(define (third x) (list-ref x 2))
+(define (fourth x) (list-ref x 3))
 
 ;; Syntax objects
 (define-struct stx:atom (datum loc context))

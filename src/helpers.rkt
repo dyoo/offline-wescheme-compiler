@@ -1,4 +1,4 @@
-#lang racket/base
+#lang planet dyoo/whalesong
 
 (require "rbtree.rkt"
          "stx.rkt"
@@ -144,11 +144,10 @@
       (string-join (cdr strs) delim))]))
 
 
-(define (second x)
-  (cadr x))
+(define (second x) (list-ref x 1))
+(define (third x) (list-ref x 2))
+(define (fourth x) (list-ref x 3))
 
-(define (third x)
-  (caddr x))
 
 
 

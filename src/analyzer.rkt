@@ -1,4 +1,4 @@
-#lang racket/base
+#lang planet dyoo/whalesong
 
 (require "env.rkt"
          "pinfo.rkt"
@@ -13,9 +13,10 @@
 (define false #f)
 (define empty '())
 (define rest cdr)
-(define second cadr)
-(define third caddr)
-(define fourth cadddr)
+(define (second x) (list-ref x 1))
+(define (third x) (list-ref x 2))
+(define (fourth x) (list-ref x 3))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

@@ -1,4 +1,4 @@
-#lang racket/base
+#lang planet dyoo/whalesong
 
 ;; A labeled translation consists of a label, and a translation
 (define-struct labeled-translation (label  ;; number

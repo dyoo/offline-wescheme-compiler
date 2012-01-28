@@ -14,9 +14,11 @@
 
 
 (define first car)
-(define second cadr)
-(define third caddr)
-(define fourth cadddr)
+
+(define (second x) (list-ref x 1))
+(define (third x) (list-ref x 2))
+(define (fourth x) (list-ref x 3))
+
 (define rest cdr)
 (define empty '())
 (define empty? null?)

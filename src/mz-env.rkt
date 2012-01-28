@@ -1,4 +1,4 @@
-#lang racket/base
+#lang planet dyoo/whalesong
 
 
 ;; Representation of the stack environment of the mzscheme vm, so we know where
@@ -92,9 +92,7 @@
        (define names (global-env-names env))
        (define parent-env (global-env-parent-env env))
        (cond [(position a-name names)
-              =>
-              (lambda (pos)
-                (make-global-stack-reference a-name depth pos))]
+              (make-global-stack-reference a-name depth (position a-name names))]
              [else
               (loop parent-env (add1 depth))])]
       

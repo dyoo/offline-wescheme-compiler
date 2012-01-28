@@ -1,4 +1,4 @@
-#lang racket/base
+#lang planet dyoo/whalesong
 
 (require "helpers.rkt"
          "pinfo.rkt"
@@ -11,8 +11,9 @@
 (define false #f)
 (define first car)
 (define rest cdr)
-(define second cadr)
-(define third caddr)
+(define (second x) (list-ref x 1))
+(define (third x) (list-ref x 2))
+(define (fourth x) (list-ref x 3))
 (define empty? null?)
 (define empty '())
 
