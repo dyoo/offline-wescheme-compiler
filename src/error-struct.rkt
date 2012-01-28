@@ -1,7 +1,5 @@
 #lang racket/base
 
-(require "stx.rkt"
-         "arity-struct.rkt")
 
 (define-struct moby-error (location error-type))
 

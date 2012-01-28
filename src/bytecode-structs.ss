@@ -1,8 +1,4 @@
-#lang scheme/base
-(require scheme/contract
-         scheme/list
-         scheme/match
-        )
+#lang racket/base
 
 #| Unresolved issues
 
@@ -23,8 +19,8 @@
 (define-syntax-rule (define-form-struct* id id+par ([field-id field-contract] ...))
   (begin
     (define-struct id+par (field-id ...) #:transparent)
-    (provide/contract
-     [struct id ([field-id field-contract] ...)])))
+    (provide
+     [struct-out id])))
 
 (define-syntax define-form-struct
   (syntax-rules ()
@@ -207,7 +203,7 @@
                                           [mark-renames any/c] 
                                           [plus-kern? boolean?]))
 
-(provide/contract (struct indirect ([v (or/c closure? #f)])))
+(provide (struct-out indirect))
 
 
 

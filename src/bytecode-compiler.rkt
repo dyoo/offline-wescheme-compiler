@@ -2,10 +2,7 @@
 
 ;; This program translates advanced-level Scheme into mzscheme-vm's bytecode.
 
-(require racket/bool
-         racket/contract
-         racket/match
-         "desugar.rkt"
+(require "desugar.rkt"
          "analyzer.rkt"
          "rbtree.rkt"
          "helpers.rkt"
@@ -24,26 +21,14 @@
 (define empty '())
 (define empty? null?)
 
-(provide/contract [compile-compilation-top
-                   (program? pinfo? #:name symbol? . -> . 
-                             (values (or/c bcode:form? bcode:indirect? any/c)
-                                     pinfo?))]
-                  
-                  [compile-expression 
-                   (expression? env? pinfo? . -> . 
-                                (values 
-                                 (or/c bcode:form? bcode:indirect? any/c)
-                                 pinfo?))]
-                  
-                  [free-variables 
-                   (expression? env? . -> . (listof symbol?))])
+(provide compile-compilation-top
+         compile-expression 
+         free-variables)
 
 
 
-
-;; compile-compilation-top-module: program pinfo -> 
-(define (compile-compilation-top a-program base-pinfo
-                                 #:name name) 
+;; compile-compilation-top-module: program pinfo -> (values compilation-top pinfo)
+(define (compile-compilation-top name a-program base-pinfo) 
   (let* ([a-program+pinfo (desugar-program a-program base-pinfo)]
          [a-program (first a-program+pinfo)]
          [pinfo (second a-program+pinfo)]
@@ -372,14 +357,19 @@
 
 (define (compile-identifier-expression expr env pinfo)
   (let ([a-stack-reference (env-lookup env (stx-e expr))])
-    (values (match a-stack-reference
-              [(struct local-stack-reference (name boxed? depth))
+    (values (cond
+              [(local-stack-reference?  a-stack-reference)
+               (define boxed? (local-stack-reference-boxed? a-stack-reference))
+               (define depth (local-stack-reference-depth a-stack-reference))
                (bcode:make-localref boxed? depth #f #f #f)]
               
-              [(struct global-stack-reference (name depth pos))
+              [(global-stack-reference? a-stack-reference)
+               (define depth (global-stack-reference-depth a-stack-reference))
+               (define pos (global-stack-reference-pos a-stack-reference))
                (bcode:make-toplevel depth pos #f #f)]
               
-              [(struct unbound-stack-reference (name))
+              [(unbound-stack-reference? a-stack-reference)
+               (define name (unbound-stack-reference-name a-stack-reference))
                (error 'compile-identifier-expression 
                       (format "Couldn't find ~a in the environment" 
                               name))])
@@ -672,12 +662,13 @@
                        
                        ;; Identifiers
                        [(symbol? (stx-e expr))
-                        (match (env-lookup env (stx-e expr))
-                          [(struct local-stack-reference (name boxed? depth))
+                        (define ref (env-lookup env (stx-e expr)))
+                        (cond
+                          [(local-stack-reference? ref)
                            empty]
-                          [(struct global-stack-reference (name depth pos))
+                          [(global-stack-reference? ref)
                            empty]
-                          [(struct unbound-stack-reference (name))
+                          [(unbound-stack-reference? ref)
                            (list (stx-e expr))])]
                        
                        
@@ -775,7 +766,7 @@
                    (lambda (x y)
                      (string<? (symbol->string x) (symbol->string y)))
                    
-                   symbol=?))
+                   eq?))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 

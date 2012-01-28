@@ -3,7 +3,6 @@
 (require "rbtree.rkt"
          "helpers.rkt"
          "stx.rkt"
-         "error-struct.rkt"
          "binding.rkt")
 
 ;; An env collects a set of bindings.
