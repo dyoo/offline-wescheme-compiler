@@ -1,8 +1,5 @@
 #lang racket/base
 
-(require racket/local
-         racket/contract)
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -81,47 +78,47 @@
 ;; string->permission: string -> permission
 ;; Translates a string reference of a permission back into a permission.
 (define (string->permission a-ref)
-  (local [
-          ;; is-permission/1?: string string -> boolean
-          ;; Returns true if the reference appears to be a permission of the given
-          ;; name
-          (define (is-permission/1? permission-name a-ref)
-            (and (> (string-length a-ref)
-                    (string-length permission-name))
-                 (string=? (substring a-ref 0 (string-length permission-name))
-                           permission-name)))
-          
-          ;; construct-permission: string string (string -> permission) -> permission
-          ;; Constructs a permission out of a permission string reference.
-          (define (construct-permission/1 permission-name a-ref make-permission:*)
-            (make-permission:* (substring a-ref 
-                                          (add1 (string-length permission-name))
-                                          (string-length a-ref))))]
-    (cond
-      [(string=? a-ref "PERMISSION:LOCATION")
-       PERMISSION:LOCATION]
-      [(string=? a-ref "PERMISSION:SEND-SMS")
-       PERMISSION:SEND-SMS]     
-      [(string=? a-ref "PERMISSION:RECEIVE-SMS")
-       PERMISSION:RECEIVE-SMS]
-      [(string=? a-ref "PERMISSION:TILT")
-       PERMISSION:TILT]
-      [(string=? a-ref "PERMISSION:SHAKE")
-       PERMISSION:SHAKE]
-      [(string=? a-ref "PERMISSION:INTERNET")
-       PERMISSION:INTERNET]
-      [(string=? a-ref "PERMISSION:TELEPHONY")
-       PERMISSION:TELEPHONY]
-      [(string=? a-ref "PERMISSION:WAKE-LOCK")
-       PERMISSION:WAKE-LOCK]
-      [(string=? a-ref "PERMISSION:VIBRATE")
-       PERMISSION:VIBRATE]
-      [(string=? a-ref "PERMISSION:FOREIGN-FUNCTION-INTERFACE")
-       PERMISSION:FOREIGN-FUNCTION-INTERFACE]
-      [(is-permission/1? "PERMISSION:OPEN-IMAGE-URL" a-ref)
-       (construct-permission/1 "PERMISSION:OPEN-IMAGE-URL" a-ref make-permission:open-image-url)]
-      [(is-permission/1? "PERMISSION:UNIVERSE" a-ref)
-       (construct-permission/1 "PERMISSION:UNIVERSE" a-ref make-permission:universe)])))
+  
+  ;; is-permission/1?: string string -> boolean
+  ;; Returns true if the reference appears to be a permission of the given
+  ;; name
+  (define (is-permission/1? permission-name a-ref)
+    (and (> (string-length a-ref)
+            (string-length permission-name))
+         (string=? (substring a-ref 0 (string-length permission-name))
+                   permission-name)))
+  
+  ;; construct-permission: string string (string -> permission) -> permission
+  ;; Constructs a permission out of a permission string reference.
+  (define (construct-permission/1 permission-name a-ref make-permission:*)
+    (make-permission:* (substring a-ref 
+                                  (add1 (string-length permission-name))
+                                  (string-length a-ref))))
+  (cond
+    [(string=? a-ref "PERMISSION:LOCATION")
+     PERMISSION:LOCATION]
+    [(string=? a-ref "PERMISSION:SEND-SMS")
+     PERMISSION:SEND-SMS]     
+    [(string=? a-ref "PERMISSION:RECEIVE-SMS")
+     PERMISSION:RECEIVE-SMS]
+    [(string=? a-ref "PERMISSION:TILT")
+     PERMISSION:TILT]
+    [(string=? a-ref "PERMISSION:SHAKE")
+     PERMISSION:SHAKE]
+    [(string=? a-ref "PERMISSION:INTERNET")
+     PERMISSION:INTERNET]
+    [(string=? a-ref "PERMISSION:TELEPHONY")
+     PERMISSION:TELEPHONY]
+    [(string=? a-ref "PERMISSION:WAKE-LOCK")
+     PERMISSION:WAKE-LOCK]
+    [(string=? a-ref "PERMISSION:VIBRATE")
+     PERMISSION:VIBRATE]
+    [(string=? a-ref "PERMISSION:FOREIGN-FUNCTION-INTERFACE")
+     PERMISSION:FOREIGN-FUNCTION-INTERFACE]
+    [(is-permission/1? "PERMISSION:OPEN-IMAGE-URL" a-ref)
+     (construct-permission/1 "PERMISSION:OPEN-IMAGE-URL" a-ref make-permission:open-image-url)]
+    [(is-permission/1? "PERMISSION:UNIVERSE" a-ref)
+     (construct-permission/1 "PERMISSION:UNIVERSE" a-ref make-permission:universe)]))
 
 
 
@@ -157,36 +154,32 @@
      (list "android.permission.INTERNET")]))
 
 
-(provide/contract [permission? (any/c . -> . boolean?)]
+(provide permission?
                   
-                  [struct permission:location ()]
-                  [struct permission:send-sms ()]
-                  [struct permission:receive-sms ()]
-                  [struct permission:tilt ()]
-                  [struct permission:shake ()]
-                  [struct permission:internet ()]
-                  [struct permission:telephony ()]
-                  [struct permission:wake-lock ()]
-                  [struct permission:vibrate ()]
-                  [struct permission:foreign-function-interface ()]
-                  [struct permission:open-image-url ((url string?))]
-                  [struct permission:universe ((url string?))]
+         [struct-out permission:location]
+         [struct-out permission:send-sms]
+         [struct-out permission:receive-sms]
+         [struct-out permission:tilt]
+         [struct-out permission:shake]
+         [struct-out permission:internet]
+         [struct-out permission:telephony]
+         [struct-out permission:wake-lock]
+         [struct-out permission:vibrate]
+         [struct-out permission:foreign-function-interface]
+         [struct-out permission:open-image-url]
+         [struct-out permission:universe]
+         
+         PERMISSION:LOCATION 
+         PERMISSION:SEND-SMS
+         PERMISSION:RECEIVE-SMS
+         PERMISSION:TILT
+         PERMISSION:SHAKE
+         PERMISSION:INTERNET
+         PERMISSION:TELEPHONY
+         PERMISSION:WAKE-LOCK
+         PERMISSION:VIBRATE
+         PERMISSION:FOREIGN-FUNCTION-INTERFACE
                   
-                  [PERMISSION:LOCATION permission?]
-                  [PERMISSION:SEND-SMS permission?]
-                  [PERMISSION:RECEIVE-SMS permission?]
-                  [PERMISSION:TILT permission?]
-                  [PERMISSION:SHAKE permission?]
-                  [PERMISSION:INTERNET permission?]
-                  [PERMISSION:TELEPHONY permission?]
-                  [PERMISSION:WAKE-LOCK permission?]
-                  [PERMISSION:VIBRATE permission?]
-                  [PERMISSION:FOREIGN-FUNCTION-INTERFACE permission?]
-                  
-                  [permission->string
-                   (permission? . -> . string?)]
-                  [string->permission
-                   (string? . -> . permission?)]
-                  
-                  [permission->android-permissions 
-                   (permission? . -> . (listof string?))])
+         permission->string
+         string->permission
+         permission->android-permissions)

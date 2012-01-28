@@ -2,8 +2,7 @@
 
 ;; This program translates advanced-level Scheme into mzscheme-vm's bytecode.
 
-(require racket/local
-         racket/bool
+(require racket/bool
          racket/contract
          racket/match
          "desugar.rkt"

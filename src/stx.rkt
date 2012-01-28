@@ -1,7 +1,9 @@
 #lang racket/base
-(require racket/contract
-         racket/list
-         racket/bool)
+
+(define first car)
+(define second cadr)
+(define third caddr)
+(define fourth cadddr)
 
 ;; Syntax objects
 (define-struct stx:atom (datum loc context))
@@ -93,9 +95,9 @@
     [(stx:atom? a-stx)
      #f]
     [(stx:list? a-stx)
-     (and (not (empty? (stx:list-elts a-stx)))
+     (and (not (null? (stx:list-elts a-stx)))
           (symbol? (stx-e (first (stx:list-elts a-stx))))
-          (symbol=? (stx-e (first (stx:list-elts a-stx)))
+          (eq?  (stx-e (first (stx:list-elts a-stx)))
                     a-sym))]))
 
 
@@ -107,7 +109,7 @@
   (cond
     [(stx? a-datum)
      a-datum]
-    [(or (pair? a-datum) (empty? a-datum))
+    [(or (pair? a-datum) (null? a-datum))
      (make-stx:list (map (lambda (x) (datum->stx context-stx x a-loc)) a-datum)
                     a-loc
                     (if (stx? context-stx)
@@ -179,33 +181,24 @@
   (map sexp->stx an-sexp))
 
 
-
-  
-
-(provide/contract [stx:atom? (any/c . -> . boolean?)]
-                  [stx:list? (any/c . -> . boolean?)]
+(provide stx:atom?
+         stx:list?
                   
-                  [struct Loc ([offset number?]
-                               [line number?]
-                               [column number?]
-                               [span number?]
-                               [id string?])]
-                  [Loc->sexp (Loc? . -> . any/c)]
-                  [sexp->Loc (any/c . -> . Loc?)]
+         (struct-out Loc)
+         Loc->sexp
+         sexp->Loc
+         stx?
+         stx-e
+         stx-loc
+         stx-context
+         stx-begins-with?
+         datum->stx
+         stx->datum
                   
-                  [stx? (any/c . -> . boolean?)]
-                  [stx-e (stx? . -> . any)]
-                  [stx-loc (stx? . -> . any)]
-                  [stx-context (stx? . -> . (or/c false/c any/c))]
+         stx->sexp
+         sexp->stx
                   
-                  [stx-begins-with? (stx? symbol? . -> . boolean?)]
-                  [datum->stx ((or/c false? stx?) any/c Loc? . -> . stx?)]
-                  [stx->datum (stx? . -> . any)]
-                  
-                  [stx->sexp (stx? . -> . any)]
-                  [sexp->stx (any/c . -> . stx?)]
-                  
-                  [program->sexp ((listof stx?) . -> . any)]
-                  [sexp->program (any/c . -> . (listof stx?))]
-                  
-                  [stx-update-context (stx? any/c . -> . stx?)])
+         program->sexp
+         sexp->program
+         
+         stx-update-context)

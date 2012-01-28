@@ -1,9 +1,6 @@
 #lang racket/base
 
-(require racket/contract
-         racket/bool
-         racket/local
-         racket/list)
+
 
 ;; Red black trees.
 ;; Most of this comes from the code in:
@@ -57,29 +54,29 @@
 ;; rbtree-member? (X X -> boolean) (treeof X Y) X -> boolean
 (define (rbtree-member? lt? t k)
   (cond [(rbtree-empty? t) 
-         false]
+         #f]
         [(lt? k (rbtree-key t)) 
          (rbtree-member? lt? (rbtree-lkid t) k)]
         [(lt? (rbtree-key t) k)
          (rbtree-member? lt? (rbtree-rkid t) k)]
         [else 
-         true]))
+         #t]))
 
 
 
 
 ;; rbtree-insert: (X X -> boolean) (treeof X Y) X Y -> (treeof X Y)
 (define (rbtree-insert lt? t k v)
-  (local [(define (ins t)
-            (cond [(rbtree-empty? t) (make-rbtree 'red k v empty-rbtree empty-rbtree)]
-                  [(lt? k (rbtree-key t))
-                   (rbtree-balance (rbtree-color t) (rbtree-key t) (rbtree-value t) (ins (rbtree-lkid t)) (rbtree-rkid t))]
-                  [(lt? (rbtree-key t) k)
-                   (rbtree-balance (rbtree-color t) (rbtree-key t) (rbtree-value t) (rbtree-lkid t) (ins (rbtree-rkid t)))]
-                  [else
-                   (make-rbtree (rbtree-color t) k v (rbtree-lkid t) (rbtree-rkid t))]))]
-    (let ([z (ins t)])
-      (make-rbtree 'black (rbtree-key z) (rbtree-value z) (rbtree-lkid z) (rbtree-rkid z)))))
+  (define (ins t)
+    (cond [(rbtree-empty? t) (make-rbtree 'red k v empty-rbtree empty-rbtree)]
+          [(lt? k (rbtree-key t))
+           (rbtree-balance (rbtree-color t) (rbtree-key t) (rbtree-value t) (ins (rbtree-lkid t)) (rbtree-rkid t))]
+          [(lt? (rbtree-key t) k)
+           (rbtree-balance (rbtree-color t) (rbtree-key t) (rbtree-value t) (rbtree-lkid t) (ins (rbtree-rkid t)))]
+          [else
+           (make-rbtree (rbtree-color t) k v (rbtree-lkid t) (rbtree-rkid t))]))
+  (let ([z (ins t)])
+    (make-rbtree 'black (rbtree-key z) (rbtree-value z) (rbtree-lkid z) (rbtree-rkid z))))
 
 
 ;; rbtree-balance: color X Y (treeof X Y) (treeof X Y) -> (treeof X Y)
@@ -107,14 +104,14 @@
 
 ;; rbtree->list: (treeof X Y) -> (listof (list X Y))
 (define (rbtree->list t)
-  (local [(define (enlist t xs)
-            (cond [(rbtree-empty? t) xs]
-                  [(and (rbtree-empty? (rbtree-lkid t)) (rbtree-empty? (rbtree-rkid t)))
-                   (cons (list (rbtree-key t) (rbtree-value t)) xs)]
-                  [else (enlist (rbtree-lkid t)
-                                (cons (list (rbtree-key t) (rbtree-value t))
-                                      (enlist (rbtree-rkid t) xs)))]))]
-    (enlist t empty)))
+  (define (enlist t xs)
+    (cond [(rbtree-empty? t) xs]
+          [(and (rbtree-empty? (rbtree-lkid t)) (rbtree-empty? (rbtree-rkid t)))
+           (cons (list (rbtree-key t) (rbtree-value t)) xs)]
+          [else (enlist (rbtree-lkid t)
+                        (cons (list (rbtree-key t) (rbtree-value t))
+                              (enlist (rbtree-rkid t) xs)))]))
+  (enlist t '()))
 
 
 ;; rbtree-fold: rbtree (X Y Z -> Z) Z -> Z
@@ -142,32 +139,12 @@
 
 
 
-(provide/contract [rbtree? (any/c . -> . boolean?)]
-                  
-                  [empty-rbtree 
-                   rbtree?]
-                  
-                  [rbtree-insert 
-                   ((any/c any/c . -> . boolean?) rbtree? any/c any/c
-                                                  . -> . rbtree?)]
-                  [rbtree-member? 
-                   ((any/c any/c . -> . boolean?) rbtree? any/c
-                                                  . -> . boolean?)]
-                  
-                  [rbtree-lookup 
-                   ((any/c any/c . -> . boolean?) rbtree? any/c 
-                                                  . -> . (or/c false/c (list/c any/c any/c)))]
-
-                  [rbtree-ref
-                   ((any/c any/c . -> . boolean?) rbtree? any/c (-> any/c)
-                                                  . -> . any/c)]
-                  
-                  [rbtree->list
-                   (rbtree? . -> . (listof (list/c any/c any/c)))]
-                  
-                  [rbtree-keys
-                   (rbtree? . -> . (listof any/c))]
-                  
-                  [rbtree-fold
-                   (rbtree? (any/c any/c any/c . -> . any/c) any/c . -> . any/c)]
-                  )
+(provide rbtree?
+         empty-rbtree 
+         rbtree-insert 
+         rbtree-member? 
+         rbtree-lookup 
+         rbtree-ref
+         rbtree->list
+         rbtree-keys
+         rbtree-fold)

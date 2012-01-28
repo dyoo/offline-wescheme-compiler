@@ -9,9 +9,7 @@
          "error-struct.rkt"
          "permission-struct.rkt"
          "binding.rkt"
-         "stx.rkt"
-         racket/local
-         racket/contract)
+         "stx.rkt")
 
 (define empty '())
 (define true #t)
@@ -32,7 +30,7 @@
                       gensym-counter         ; number
                       provided-names         ; (hashof symbol provide-binding)
                       defined-names          ; (hashof symbol binding)
-
+                      
                       shared-expressions     ; (hashof expression labeled-translation)
                       ;; Maintains a mapping between expressions and a labeled translation.  Acts
                       ;; as a symbol table to avoid duplicate construction of common literal values.
@@ -40,7 +38,7 @@
                       with-location-emits?   ; boolean
                       ;; If true, the compiler emits calls to plt.Kernel.setLastLoc to maintain
                       ;; source position during evaluation.                      
-
+                      
                       allow-redefinition?     ; boolean
                       ;; If true, redefinition of a value that's already defined will not raise an error.
                       
@@ -48,7 +46,7 @@
                       module-resolver        ; (module-name -> (module-binding | false))
                       module-path-resolver   ; (string module-path -> module-name)
                       current-module-path    ; module-path
-
+                      
                       declared-permissions            ; (listof (listof symbol any/c))
                       
                       ))
@@ -251,7 +249,7 @@
               (cons (list a-name a-permission)
                     (pinfo-declared-permissions a-pinfo))))
 
-  
+
 
 ;; pinfo-accumulate-shared-expression: expression string pinfo -> pinfo
 (define (pinfo-accumulate-shared-expression a-shared-expression a-translation a-pinfo)
@@ -274,7 +272,7 @@
               (pinfo-current-module-path a-pinfo)
               (pinfo-declared-permissions a-pinfo)))
 
-                                            
+
 ;; pinfo-accumulate-defined-binding: binding pinfo loc -> pinfo
 ;; Adds a new defined binding to a pinfo's set.
 (define (pinfo-accumulate-defined-binding a-binding a-pinfo a-loc)
@@ -405,7 +403,7 @@
               (pinfo-current-module-path a-pinfo)
               (pinfo-declared-permissions a-pinfo)))
 
-  
+
 
 
 ;; pinfo-gensym: pinfo symbol -> (list pinfo symbol)
@@ -425,46 +423,46 @@
                     (pinfo-module-path-resolver a-pinfo)
                     (pinfo-current-module-path a-pinfo)
                     (pinfo-declared-permissions a-pinfo))
-
+        
         (string->symbol
          (string-append (symbol->string a-label)
                         (number->string (pinfo-gensym-counter a-pinfo))))))
 
-   
+
 
 
 ;; pinfo-permissions: pinfo -> (listof permission)
 ;; Given a pinfo, collect the list of permissions.
 (define (pinfo-permissions a-pinfo)
-  (local [;; unique: (listof X) -> (listof X)
-          (define (unique lst)
-            (cond [(empty? lst)
-                   empty]
-                  [(member? (first lst)
-                            (rest lst))
-                   (unique (rest lst))]
-                  [else
-                   (cons (first lst)
-                         (unique (rest lst)))]))
-          ;; member?: X (listof X) -> boolean
-          (define (member? x lst)
-            (cond
-              [(empty? lst)
-               false]
-              [(eq? (first lst) x)
-               true]
-              [else
-               (member? x (rest lst))]))]
-    (unique
-     (foldl (lambda (a-binding permissions)
-              (cond [(binding:function? a-binding)
-                     (append (binding:function-permissions a-binding)
-                             permissions)]
-                    [(binding:constant? a-binding)
-                     (append (binding:constant-permissions a-binding)
-                             permissions)]))
-            empty
-            (pinfo-used-bindings a-pinfo)))))
+  ;; unique: (listof X) -> (listof X)
+  (define (unique lst)
+    (cond [(empty? lst)
+           empty]
+          [(member? (first lst)
+                    (rest lst))
+           (unique (rest lst))]
+          [else
+           (cons (first lst)
+                 (unique (rest lst)))]))
+  ;; member?: X (listof X) -> boolean
+  (define (member? x lst)
+    (cond
+      [(empty? lst)
+       false]
+      [(eq? (first lst) x)
+       true]
+      [else
+       (member? x (rest lst))]))
+  (unique
+   (foldl (lambda (a-binding permissions)
+            (cond [(binding:function? a-binding)
+                   (append (binding:function-permissions a-binding)
+                           permissions)]
+                  [(binding:constant? a-binding)
+                   (append (binding:constant-permissions a-binding)
+                           permissions)]))
+          empty
+          (pinfo-used-bindings a-pinfo))))
 
 
 
@@ -513,125 +511,106 @@
 ;; pinfo-get-exposed-bindings: pinfo -> (listof binding)
 ;; Extract the list of the defined bindings that are exposed by provide.
 (define (pinfo-get-exposed-bindings a-pinfo)
-  (local [;; lookup-provide-binding-in-definition-bindings: provide-binding compiled-program -> (listof binding)
-          ;; Lookup the provided bindings.
-          (define (lookup-provide-binding-in-definition-bindings a-provide-binding)
-            (local [(define list-or-false
-                      (rbtree-lookup symbol<
-                                     (pinfo-defined-names a-pinfo)
-                                     (stx-e (provide-binding-stx a-provide-binding))))
-                    
-                    (define the-binding
-                      (cond
-                        [(list? list-or-false)
-                         (check-binding-compatibility a-provide-binding
-                                                      (second list-or-false))]
-                        [else
-                         (raise (make-moby-error (stx-loc (provide-binding-stx a-provide-binding))
-                                                 (make-moby-error-type:provided-name-not-defined
-                                                  (stx-e (provide-binding-stx a-provide-binding)))))]))
-
-                    ;; ref: symbol -> binding
-                    ;; Lookup the binding, given the symbolic identifier.
-                    (define (ref id)
-                      (second (rbtree-lookup symbol< (pinfo-defined-names a-pinfo) id)))]
-              (cond
-                [(provide-binding:struct-id? a-provide-binding)
-                 (append (list the-binding
-                               (ref (binding:structure-constructor the-binding))
-                               (ref (binding:structure-predicate the-binding)))
-                         (map ref (binding:structure-accessors the-binding))
-                         (map ref (binding:structure-mutators the-binding))
-                         )]
-                [else
-                 (list the-binding)])))
-          
-          
-          ;; decorate-with-permissions: binding -> binding
-          ;; HACK!
-          (define (decorate-with-permissions a-binding)
-            (binding-update-permissions a-binding
-                                        (map second
-                                             (filter (lambda (entry)
-                                                       (eq? (first entry)
-                                                                 (binding-id a-binding)))
-                                                     (pinfo-declared-permissions a-pinfo)))))
-
-          
-          ;; Make sure that if the provide says "struct-out ...", that the exported binding
-          ;; is really a structure.
-          (define (check-binding-compatibility a-provide-binding a-binding)
-            (cond
-              [(provide-binding:struct-id? a-provide-binding)
-               (cond [(binding:structure? a-binding)
-                      a-binding]
-                     [else
-                      (raise (make-moby-error 
-                              (stx-loc (provide-binding-stx a-provide-binding))
-                              (make-moby-error-type:provided-structure-not-structure
-                               (stx-e (provide-binding-stx a-provide-binding)))))])]
-              [else
-               a-binding]))]
-    (rbtree-fold (pinfo-provided-names a-pinfo)
-                 (lambda (id a-provide-binding acc)
-                   (append (map decorate-with-permissions
-                                (lookup-provide-binding-in-definition-bindings a-provide-binding))
+  ;; lookup-provide-binding-in-definition-bindings: provide-binding compiled-program -> (listof binding)
+  ;; Lookup the provided bindings.
+  (define (lookup-provide-binding-in-definition-bindings a-provide-binding)
+    (define list-or-false
+      (rbtree-lookup symbol<
+                     (pinfo-defined-names a-pinfo)
+                     (stx-e (provide-binding-stx a-provide-binding))))
+    
+    (define the-binding
+      (cond
+        [(list? list-or-false)
+         (check-binding-compatibility a-provide-binding
+                                      (second list-or-false))]
+        [else
+         (raise (make-moby-error (stx-loc (provide-binding-stx a-provide-binding))
+                                 (make-moby-error-type:provided-name-not-defined
+                                  (stx-e (provide-binding-stx a-provide-binding)))))]))
+    
+    ;; ref: symbol -> binding
+    ;; Lookup the binding, given the symbolic identifier.
+    (define (ref id)
+      (second (rbtree-lookup symbol< (pinfo-defined-names a-pinfo) id)))
+    (cond
+      [(provide-binding:struct-id? a-provide-binding)
+       (append (list the-binding
+                     (ref (binding:structure-constructor the-binding))
+                     (ref (binding:structure-predicate the-binding)))
+               (map ref (binding:structure-accessors the-binding))
+               (map ref (binding:structure-mutators the-binding))
+               )]
+      [else
+       (list the-binding)]))
+  
+  
+  ;; decorate-with-permissions: binding -> binding
+  ;; HACK!
+  (define (decorate-with-permissions a-binding)
+    (binding-update-permissions a-binding
+                                (map second
+                                     (filter (lambda (entry)
+                                               (eq? (first entry)
+                                                    (binding-id a-binding)))
+                                             (pinfo-declared-permissions a-pinfo)))))
+  
+  
+  ;; Make sure that if the provide says "struct-out ...", that the exported binding
+  ;; is really a structure.
+  (define (check-binding-compatibility a-provide-binding a-binding)
+    (cond
+      [(provide-binding:struct-id? a-provide-binding)
+       (cond [(binding:structure? a-binding)
+              a-binding]
+             [else
+              (raise (make-moby-error 
+                      (stx-loc (provide-binding-stx a-provide-binding))
+                      (make-moby-error-type:provided-structure-not-structure
+                       (stx-e (provide-binding-stx a-provide-binding)))))])]
+      [else
+       a-binding]))
+  (rbtree-fold (pinfo-provided-names a-pinfo)
+               (lambda (id a-provide-binding acc)
+                 (append (map decorate-with-permissions
+                              (lookup-provide-binding-in-definition-bindings a-provide-binding))
                          acc))
-                 empty)))
+               empty))
 
 
 
-(provide/contract [struct pinfo ([env env?]
-                                 [modules (listof module-binding?)]
-                                 [used-bindings-hash rbtree?]
-                                 [free-variables (listof symbol?)]
-                                 [gensym-counter number?]
-                                 [provided-names rbtree?]
-                                 [defined-names rbtree?]
-                                 [shared-expressions rbtree?]
-                                 
-                                 [with-location-emits? boolean?]
-                                 [allow-redefinition? boolean?]
-                                 
-                                 [module-resolver (module-name? . -> . (or/c module-binding? false/c))]
-                                 [module-path-resolver (module-path? module-path? . -> . module-name?)]
-                                 [current-module-path module-path?]
-                                 [declared-permissions (listof (list/c symbol? permission?))])]
+(provide [struct-out pinfo]                  
+         
+         empty-pinfo
+         get-base-pinfo
+         pinfo-used-bindings
+         pinfo-accumulate-module
+         pinfo-accumulate-binding-use
+         pinfo-accumulate-defined-binding
+         pinfo-accumulate-defined-bindings
+         pinfo-accumulate-module-bindings
+         pinfo-accumulate-shared-expression
+         pinfo-accumulate-free-variable-use
+         
+         pinfo-accumulate-declared-permission
                   
+         pinfo-update-provided-names
+         pinfo-update-defined-names
+         pinfo-update-env
+         pinfo-update-with-location-emits?
+         pinfo-update-allow-redefinition?
                   
-                  [empty-pinfo pinfo?]
-                  [get-base-pinfo (symbol? . -> . pinfo?)]
-                  [pinfo-used-bindings (pinfo? . -> . (listof binding?))]
-                  [pinfo-accumulate-module (module-binding? pinfo? . -> . pinfo?)]
-                  [pinfo-accumulate-binding-use (binding? pinfo? . -> . pinfo?)]
-                  [pinfo-accumulate-defined-binding (binding? pinfo? Loc? . -> . pinfo?)]
-                  [pinfo-accumulate-defined-bindings ((listof binding?) pinfo? Loc? . -> . pinfo?)]
-                  [pinfo-accumulate-module-bindings ((listof binding?) pinfo? . -> . pinfo?)]
-                  [pinfo-accumulate-shared-expression (expression? string? pinfo? . -> . pinfo?)]
-                  [pinfo-accumulate-free-variable-use (symbol? pinfo? . -> . pinfo?)]
-
-                  [pinfo-accumulate-declared-permission (symbol? permission? pinfo? . -> . pinfo?)]
-
-                  [pinfo-update-provided-names (pinfo? rbtree? . -> . pinfo?)]
-                  [pinfo-update-defined-names (pinfo? rbtree? . -> . pinfo?)]
-                  [pinfo-update-env (pinfo? env? . -> . pinfo?)]
-                  [pinfo-update-with-location-emits? (pinfo? boolean? . -> . pinfo?)]
-                  [pinfo-update-allow-redefinition? (pinfo? boolean? . -> . pinfo?)]
-
-                  [pinfo-update-module-resolver (pinfo? (module-name? . -> . (or/c module-binding? false/c))
-                                                        . -> . pinfo?)]
-                  [pinfo-update-module-path-resolver (pinfo? (module-path? module-path? . -> . (or/c module-name? false/c))
-
-                                                             . -> . pinfo?)]
-                  [pinfo-update-current-module-path (pinfo? module-path? . -> . pinfo?)]
+         pinfo-update-module-resolver
+         pinfo-update-module-path-resolver
+                                                             
+         pinfo-update-current-module-path
                   
+         pinfo-gensym
+         pinfo-permissions
                   
-                  [pinfo-gensym (pinfo? symbol? . -> . (list/c pinfo? symbol?))]
-                  [pinfo-permissions (pinfo? . -> . (listof permission?))]
- 
-                  [pinfo-get-exposed-bindings (pinfo? . -> . (listof binding?))]
+         pinfo-get-exposed-bindings
                   
-                  [struct provide-binding:id ([stx stx?])]
-                  [struct provide-binding:struct-id ([stx stx?])]
-                  [provide-binding? (any/c . -> . boolean?)]
-                  [provide-binding-stx (provide-binding? . -> . stx?)])
+         [struct-out provide-binding:id]
+         [struct-out provide-binding:struct-id]
+         provide-binding?
+         provide-binding-stx)
