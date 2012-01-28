@@ -1,9 +1,8 @@
 #lang racket/base
 
-(require "permission-struct.rkt"
-         racket/list
-         racket/bool
-         racket/contract)
+(require "permission-struct.rkt")
+(define first car)
+
 
 
 ;; binding:constant records an id and its associated Java implementation.
@@ -208,11 +207,11 @@
 (define (module-path=? p1 p2)
   (cond
     [(and (symbol? p1) (symbol? p2))
-     (symbol=? p1 p2)]
+     (eq? p1 p2)]
     [(and (string? p1) (string? p2))
      (string=? p1 p2)]
     [else
-     false]))
+     #f]))
 
 
 
@@ -254,45 +253,24 @@
 
 
 
-(provide/contract
+(provide
  
- [struct binding:constant ([name symbol?]
-                           [module-source (or/c false/c module-path?)]
-                           [permissions (listof permission?)])]
+ [struct-out binding:constant]
+ [struct-out binding:function]
+ [struct-out binding:structure]
  
- [struct binding:function ([name symbol?]
-                           [module-source (or/c false/c module-path?)]
-                           [min-arity natural-number/c]
-                           [var-arity? boolean?]
-                           [permissions (listof permission?)]
-                           [cps? boolean?])]
+ binding?
+ binding-id
+ binding->sexp
+ binding-update-permissions
+ binding-permissions
+ sexp->binding
  
- [struct binding:structure ([name symbol?]
-                            [module-source (or/c false/c module-path?)]
-                            [fields (listof symbol?)]
-                            [constructor symbol?]
-                            [predicate symbol?]
-                            [accessors (listof symbol?)]
-                            [mutators (listof symbol?)]
-                            [permissions (listof permission?)])]
+ localize-binding-to-module
  
- 
- [binding? (any/c . -> . boolean?)] 
- [binding-id (binding? . -> . symbol?)]
- [binding->sexp (binding? . -> . any)]
- [binding-update-permissions (binding? (listof permission?) . -> . binding?)]
- [binding-permissions (binding? . -> . binding?)]
- [sexp->binding (any/c . -> . binding?)]
- 
- [localize-binding-to-module (binding? module-name? . -> . binding?)]
- 
- [binding-module-source (binding? . -> . (or/c module-path? false/c))]
- 
- 
- 
- [struct module-binding ([name module-name?]
-                         [source module-path?]
-                         [bindings (listof binding?)])]
- [module-name? (any/c . -> . boolean?)]
- [module-path? (any/c . -> . boolean?)]
- [module-path=? (module-path? module-path? . -> . boolean?)])
+ binding-module-source
+  
+ [struct-out module-binding]
+ module-name?
+ module-path?
+ module-path=?)

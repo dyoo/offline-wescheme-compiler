@@ -1,16 +1,16 @@
 #lang racket/base
 
-(require racket/contract
-         racket/bool
-         racket/list
-         racket/local)
-
+(define first car)
+(define second cadr)
+(define third caddr)
 ;; Represents the arities available to a function.
 
 (define-struct arity:fixed (n))
 (define-struct arity:variable (min max))
 (define-struct arity:mixed (arities))
 
+(define (false? f)
+  (eq? f #f))
 
 ;; arity?: any -> boolean
 ;; Produces true if X is a procedure arity.
@@ -37,28 +37,28 @@
   (cond
     [(list? an-sexp)
      (cond
-       [(and (symbol=? (first an-sexp) 'arity:fixed?)
+       [(and (eq? (first an-sexp) 'arity:fixed?)
              (= 2 (length an-sexp))
              (number? (second an-sexp)))
         (make-arity:fixed (second an-sexp))]
 
-       [(and (symbol=? (first an-sexp) 'arity:variable?)
+       [(and (eq? (first an-sexp) 'arity:variable?)
              (= 3 (length an-sexp))
              (or (number? (second an-sexp)) (false? (second an-sexp)))
              (or (number? (third an-sexp)) (false? (third an-sexp))))
         (make-arity:variable (second an-sexp) (third an-sexp))]
 
-       [(and (symbol=? (first an-sexp) 'arity:mixed?)
+       [(and (eq? (first an-sexp) 'arity:mixed?)
              (list (second an-sexp)))
-        (local [(define inner-arities (map sexp->arity (second an-sexp)))]
-          (cond
-            [(andmap (lambda (x) (or (arity:fixed? x)
-                                     (arity:variable? x)))
-                     inner-arities)
-             (make-arity:mixed inner-arities)]
-            [else
-             (error 'sexp->arity 
-                    (format "Does not look like an arity structure: ~s" an-sexp))]))])]
+        (define inner-arities (map sexp->arity (second an-sexp)))
+        (cond
+          [(andmap (lambda (x) (or (arity:fixed? x)
+                                   (arity:variable? x)))
+                   inner-arities)
+           (make-arity:mixed inner-arities)]
+          [else
+           (error 'sexp->arity 
+                  (format "Does not look like an arity structure: ~s" an-sexp))])])]
 
 
     [else
@@ -66,16 +66,8 @@
 
 
 
-(provide/contract
- [struct arity:fixed 
-         ([n number?])]
- 
- [struct arity:variable 
-         ([min (or/c number? false)]
-          [max (or/c number? false)])]
- 
- [struct arity:mixed
-         ([arities 
-           (listof (or/c arity:fixed? arity:variable?))])]
- 
- [arity? (any/c . -> . boolean?)])
+(provide
+ [struct-out arity:fixed]
+ [struct-out arity:variable]
+ [struct-out arity:mixed]
+ arity?)

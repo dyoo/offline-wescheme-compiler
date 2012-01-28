@@ -6,9 +6,7 @@
          "modules.rkt"
          "rbtree.rkt"
          "stx.rkt"
-         "error-struct.rkt"
-         racket/local
-         racket/contract)
+         "error-struct.rkt")
 
 (define false #f)
 (define first car)
@@ -84,22 +82,22 @@
 ;;
 ;; FIX BUG: user must not be allowed to rebind any of the primitive keyword names
 (define (desugar-program a-program a-pinfo)
-  (local [;; processing-loop: program pinfo -> (list program pinfo)
-          (define (processing-loop a-program a-pinfo)
-            (cond 
-              [(empty? a-program)
-               (list empty a-pinfo)]
-              [else
-               (local [(define desugared-elts+pinfo
-                         (desugar-program-element (first a-program) a-pinfo))
-                       (define desugared-rest+pinfo
-                         (processing-loop (rest a-program) 
-                                          (second desugared-elts+pinfo)))]
-                 (list (append (first desugared-elts+pinfo)
-                               (first desugared-rest+pinfo))
-                       (second desugared-rest+pinfo)))]))]
-    
-    (processing-loop a-program a-pinfo)))
+  ;; processing-loop: program pinfo -> (list program pinfo)
+  (define (processing-loop a-program a-pinfo)
+    (cond 
+      [(empty? a-program)
+       (list empty a-pinfo)]
+      [else
+       (define desugared-elts+pinfo
+         (desugar-program-element (first a-program) a-pinfo))
+       (define desugared-rest+pinfo
+         (processing-loop (rest a-program) 
+                          (second desugared-elts+pinfo)))
+       (list (append (first desugared-elts+pinfo)
+                     (first desugared-rest+pinfo))
+             (second desugared-rest+pinfo))]))
+  
+  (processing-loop a-program a-pinfo))
 
 
 
@@ -119,76 +117,76 @@
     [(provide/contract-statement? an-element)
      (desugar-provide/contract an-element a-pinfo)]
     [(expression? an-element)
-     (local [(define expr+pinfo (desugar-expression an-element a-pinfo))]
-       (list (list (tag-toplevel-expression-for-printing (first expr+pinfo)))
-             (second expr+pinfo)))]))
+     (define expr+pinfo (desugar-expression an-element a-pinfo))
+     (list (list (tag-toplevel-expression-for-printing (first expr+pinfo)))
+           (second expr+pinfo))]))
 
 
 
 ;; desugar-defn: defn pinfo -> (list (listof defn) pinfo)
 (define (desugar-defn a-defn a-pinfo)
-  (local [(define define-stx (first (stx-e a-defn)))]
+  (define define-stx (first (stx-e a-defn)))
     (case-analyze-definition a-defn
                              (lambda (id args body) 
                                (begin
                                  (check-duplicate-identifiers! (cons id args))   
-                                 (local [(define subexpr+pinfo (desugar-expression body a-pinfo))]
+                                 (define subexpr+pinfo (desugar-expression body a-pinfo))
                                    (list (list (datum->stx #f (list define-stx
                                                                     (datum->stx #f (cons id args)
                                                                                 (stx-loc a-defn))
                                                                     (first subexpr+pinfo))
                                                            (stx-loc a-defn)))
-                                         (second subexpr+pinfo)))))
+                                         (second subexpr+pinfo))))
                              (lambda (id body) 
-                               (local [(define subexpr+pinfo (desugar-expression body a-pinfo))]
+                               (define subexpr+pinfo (desugar-expression body a-pinfo))
                                  (list (list (datum->stx #f (list define-stx
                                                                   id
                                                                   (first subexpr+pinfo))
                                                          (stx-loc a-defn)))
-                                       (second subexpr+pinfo))))
+                                       (second subexpr+pinfo)))
                              (lambda (id fields) 
                                ;; FIXME: extend the environment with the
                                ;; structure identifiers here!
-                               (local [(define id-string (symbol->string (stx-e id)))
-                                       (define ref-stx (datum->stx #f 
-                                                                   (string->symbol
-                                                                    (string-append id-string "-ref"))
-                                                                   (stx-loc a-defn)))
-                                       (define def-values-stx
-                                         (datum->stx 
-                                          #f 
-                                          `(define-values (,id 
-                                                           ,(string->symbol
-                                                             (string-append "make-" id-string))
-                                                           ,(string->symbol
-                                                             (string-append id-string "?"))
-                                                           ,ref-stx
-                                                           ,(string->symbol
-                                                             (string-append id-string "-set!")))
-                                             (make-struct-type ',id #f ,(length fields) 0))
-                                          (stx-loc a-defn)))
-                                       (define selector-stxs
-                                         (mapi (lambda (field i)
-                                                 (datum->stx #f 
-                                                             `(define ,(string->symbol 
-                                                                        (string-append id-string 
-                                                                                       "-" 
-                                                                                       (symbol->string (stx-e field))))
-                                                                (make-struct-field-accessor ,ref-stx ,i ',(stx-e field)))
-                                                             (stx-loc a-defn)))
-                                              fields))
-                                       ;; FIXME: add bindings to the mutators too.
-                                       ]
-                                 (list (cons def-values-stx selector-stxs) a-pinfo)))
+                               (define id-string (symbol->string (stx-e id)))
+                               (define ref-stx (datum->stx #f 
+                                                           (string->symbol
+                                                            (string-append id-string "-ref"))
+                                                           (stx-loc a-defn)))
+                               (define def-values-stx
+                                 (datum->stx 
+                                  #f 
+                                  `(define-values (,id 
+                                                   ,(string->symbol
+                                                     (string-append "make-" id-string))
+                                                   ,(string->symbol
+                                                     (string-append id-string "?"))
+                                                   ,ref-stx
+                                                   ,(string->symbol
+                                                     (string-append id-string "-set!")))
+                                     (make-struct-type ',id #f ,(length fields) 0))
+                                  (stx-loc a-defn)))
+                               (define selector-stxs
+                                 (mapi (lambda (field i)
+                                         (datum->stx #f 
+                                                     `(define ,(string->symbol 
+                                                                (string-append id-string 
+                                                                               "-" 
+                                                                               (symbol->string (stx-e field))))
+                                                        (make-struct-field-accessor ,ref-stx ,i ',(stx-e field)))
+                                                     (stx-loc a-defn)))
+                                       fields))
+                               ;; FIXME: add bindings to the mutators too.
+                               
+                               (list (cons def-values-stx selector-stxs) a-pinfo))
                              
                              (lambda (ids body)
-                               (local [(define desugared-body+pinfo (desugar-expression body a-pinfo))]
+                               (define desugared-body+pinfo (desugar-expression body a-pinfo))
                                  (list (list (datum->stx #f 
                                                          `(define-values (,@ids) 
                                                             ,(first 
                                                               desugared-body+pinfo))
                                                          (stx-loc a-defn)))
-                                       (second desugared-body+pinfo)))))))
+                                       (second desugared-body+pinfo)))))
 
 
 
@@ -198,14 +196,14 @@
     [(empty? exprs)
      (list empty pinfo)]
     [else
-     (local [(define first-desugared+pinfo 
-               (desugar-expression (first exprs) pinfo))
-             (define rest-desugared+pinfo 
-               (desugar-expressions (rest exprs) 
-                                    (second first-desugared+pinfo)))]
-       (list (cons (first first-desugared+pinfo)
-                   (first rest-desugared+pinfo))
-             (second rest-desugared+pinfo)))]))
+     (define first-desugared+pinfo 
+       (desugar-expression (first exprs) pinfo))
+     (define rest-desugared+pinfo 
+       (desugar-expressions (rest exprs) 
+                            (second first-desugared+pinfo)))
+     (list (cons (first first-desugared+pinfo)
+                 (first rest-desugared+pinfo))
+           (second rest-desugared+pinfo))]))
 
 
 ;; thunkify-stx: stx -> stx
@@ -303,59 +301,59 @@
     (check-single-body-stx! (rest (rest (stx-e expr))) expr)
     (local:check-all-definitions! (stx-e (second (stx-e expr)))
                                   (stx-loc (second (stx-e expr))))
-    (local [(define local-symbol-stx (first (stx-e expr)))
-            (define defns (stx-e (second (stx-e expr))))
-            (define body (third (stx-e expr)))
-            
-            (define desugared-defns+pinfo 
-              (desugar-program defns pinfo))
-            (define desugared-body+pinfo 
-              (desugar-expression body (second desugared-defns+pinfo)))]
-      (list (datum->stx #f (list local-symbol-stx
-                                 (datum->stx #f (first desugared-defns+pinfo)
-                                             (stx-loc (second (stx-e expr))))
-                                 (first desugared-body+pinfo))
-                        (stx-loc expr))
-            (pinfo-update-env (second desugared-body+pinfo)
-                              (pinfo-env pinfo))))))
+    (define local-symbol-stx (first (stx-e expr)))
+    (define defns (stx-e (second (stx-e expr))))
+    (define body (third (stx-e expr)))
+    
+    (define desugared-defns+pinfo 
+      (desugar-program defns pinfo))
+    (define desugared-body+pinfo 
+      (desugar-expression body (second desugared-defns+pinfo)))
+    (list (datum->stx #f (list local-symbol-stx
+                               (datum->stx #f (first desugared-defns+pinfo)
+                                           (stx-loc (second (stx-e expr))))
+                               (first desugared-body+pinfo))
+                      (stx-loc expr))
+          (pinfo-update-env (second desugared-body+pinfo)
+                            (pinfo-env pinfo)))))
 
 
 (define (local:check-all-definitions! defns a-loc)
-  (local [(define (raise-error-not-a-list an-stx a-loc)
-            (raise (make-moby-error a-loc
-                                    (make-moby-error-type:generic-syntactic-error
-                                     (format "local expects only definitions, but hasn't received a collection of them and instead received ~s."
-                                             an-stx)
-                                             
-                                     (list)))))
+  (define (raise-error-not-a-list an-stx a-loc)
+    (raise (make-moby-error a-loc
+                            (make-moby-error-type:generic-syntactic-error
+                             (format "local expects only definitions, but hasn't received a collection of them and instead received ~s."
+                                     an-stx)
+                             
+                             (list)))))
+  
+  (define (raise-error an-stx a-loc)
+    (raise (make-moby-error a-loc
+                            (make-moby-error-type:generic-syntactic-error
+                             (format "local expects only definitions, but ~s is not a definition"
+                                     (stx->datum an-stx))
+                             (list)))))
+  (cond
+    [(not (list? defns))
+     (raise-error-not-a-list defns a-loc)]
+    [(empty? defns)
+     (void)]
+    [(defn? (first defns))
+     (local:check-all-definitions! (rest defns) a-loc)]
+    [else
+     (raise-error (first defns)
+                  (stx-loc (first defns)))]))
 
-          (define (raise-error an-stx a-loc)
-            (raise (make-moby-error a-loc
-                                    (make-moby-error-type:generic-syntactic-error
-                                     (format "local expects only definitions, but ~s is not a definition"
-                                             (stx->datum an-stx))
-                                     (list)))))]
-    (cond
-      [(not (list? defns))
-       (raise-error-not-a-list defns a-loc)]
-      [(empty? defns)
-       (void)]
-      [(defn? (first defns))
-       (local:check-all-definitions! (rest defns) a-loc)]
-      [else
-       (raise-error (first defns)
-                    (stx-loc (first defns)))])))
-  
-  
+
 
 ;; desugar-application: expr pinfo -> (list expr pinfo)
 ;; Desugars function application.
 (define (desugar-application expr pinfo)
-  (local [(define exprs (stx-e expr))
-          (define desugared-exprs+pinfo (desugar-expressions exprs pinfo))]
-    (list (datum->stx #f (first desugared-exprs+pinfo)
-                      (stx-loc expr))
-          (second desugared-exprs+pinfo))))
+  (define exprs (stx-e expr))
+  (define desugared-exprs+pinfo (desugar-expressions exprs pinfo))
+  (list (datum->stx #f (first desugared-exprs+pinfo)
+                    (stx-loc expr))
+        (second desugared-exprs+pinfo)))
 
 
 
@@ -371,13 +369,13 @@
            (raise (make-moby-error (stx-loc expr)
                                    (make-moby-error-type:begin-body-empty)))]
           [else
-           (local [(define begin-symbol-stx (first (stx-e expr)))
-                   (define exprs (rest (stx-e expr)))
-                   (define desugared-exprs+pinfo (desugar-expressions exprs pinfo))]
-             (list (datum->stx #f (cons begin-symbol-stx
-                                        (first desugared-exprs+pinfo))
-                               (stx-loc expr))
-                   (second desugared-exprs+pinfo)))])))
+           (define begin-symbol-stx (first (stx-e expr)))
+           (define exprs (rest (stx-e expr)))
+           (define desugared-exprs+pinfo (desugar-expressions exprs pinfo))
+           (list (datum->stx #f (cons begin-symbol-stx
+                                      (first desugared-exprs+pinfo))
+                             (stx-loc expr))
+                 (second desugared-exprs+pinfo))])))
 
 
 ;; (if test-expr then-expr else-expr)
@@ -391,25 +389,25 @@
                                            'not-the-answer)))
     (cond
       [(= 4 (length (stx-e expr)))
-       (local [(define if-symbol-stx (first (stx-e expr)))
-               (define exprs (rest (stx-e expr)))
-               (define desugared-exprs+pinfo (desugar-expressions exprs pinfo))
-               (define test-expr (first (first desugared-exprs+pinfo)))
-               (define then-expr (second (first desugared-exprs+pinfo)))
-               (define else-expr (third (first desugared-exprs+pinfo)))]
-         (list (datum->stx #f 
-                           `(,if-symbol-stx ,test-expr
-                                            #;,(tag-application-operator/module 
-                                                (datum->stx #f 
-                                                            `(verify-boolean-branch-value 
-                                                              ,test-expr
-                                                              (quote ,(Loc->sexp (stx-loc test-expr))))
-                                                            (stx-loc test-expr))
-                                                'moby/runtime/kernel/misc)
-                                            ,then-expr
-                                            ,else-expr)
-                           (stx-loc expr))
-               (second desugared-exprs+pinfo)))]
+       (define if-symbol-stx (first (stx-e expr)))
+       (define exprs (rest (stx-e expr)))
+       (define desugared-exprs+pinfo (desugar-expressions exprs pinfo))
+       (define test-expr (first (first desugared-exprs+pinfo)))
+       (define then-expr (second (first desugared-exprs+pinfo)))
+       (define else-expr (third (first desugared-exprs+pinfo)))
+       (list (datum->stx #f 
+                         `(,if-symbol-stx ,test-expr
+                                          #;,(tag-application-operator/module 
+                                              (datum->stx #f 
+                                                          `(verify-boolean-branch-value 
+                                                            ,test-expr
+                                                            (quote ,(Loc->sexp (stx-loc test-expr))))
+                                                          (stx-loc test-expr))
+                                              'moby/runtime/kernel/misc)
+                                          ,then-expr
+                                          ,else-expr)
+                         (stx-loc expr))
+             (second desugared-exprs+pinfo))]
       [(< (length (stx-e expr)) 4)
        (raise (make-moby-error (stx-loc expr)
                                (make-moby-error-type:if-too-few-elements)))]
@@ -445,16 +443,16 @@
                                (make-moby-error-type:boolean-chain-too-few-elements
                                 (stx-e (first (stx-e expr))))))]
       [else
-       (local [(define boolean-chain-stx (first (stx-e expr)))
-               (define exprs (rest (stx-e expr)))
-               (define desugared-exprs+pinfo (desugar-expressions exprs pinfo))]
-         (cond [(eq? (stx-e boolean-chain-stx) 'and)
-                (list (desugar-and (first desugared-exprs+pinfo) (stx-loc expr))
-                      (second desugared-exprs+pinfo))]
-               [(eq? (stx-e boolean-chain-stx) 'or)
-                (desugar-or (first desugared-exprs+pinfo) 
-                            (stx-loc expr) 
-                            (second desugared-exprs+pinfo))]))])))
+       (define boolean-chain-stx (first (stx-e expr)))
+       (define exprs (rest (stx-e expr)))
+       (define desugared-exprs+pinfo (desugar-expressions exprs pinfo))
+       (cond [(eq? (stx-e boolean-chain-stx) 'and)
+              (list (desugar-and (first desugared-exprs+pinfo) (stx-loc expr))
+                    (second desugared-exprs+pinfo))]
+             [(eq? (stx-e boolean-chain-stx) 'or)
+              (desugar-or (first desugared-exprs+pinfo) 
+                          (stx-loc expr) 
+                          (second desugared-exprs+pinfo))])])))
 
 
 
@@ -477,26 +475,26 @@
 
 (define (desugar-or exprs loc pinfo)
   (cond [(= (length exprs) 2)
-         (local [(define pinfo+tmp-sym (pinfo-gensym pinfo 'tmp))]
-           (desugar-expression/expr+pinfo
-            (list (datum->stx #f 
-                              `(let ([,(second pinfo+tmp-sym) 
-                                      ,(first exprs)])
-                                 (if ,(second pinfo+tmp-sym)
-                                     ,(second pinfo+tmp-sym)
-                                     ,(second exprs)))
-                              loc)
-                  (first pinfo+tmp-sym))))]
+         (define pinfo+tmp-sym (pinfo-gensym pinfo 'tmp))
+         (desugar-expression/expr+pinfo
+          (list (datum->stx #f 
+                            `(let ([,(second pinfo+tmp-sym) 
+                                    ,(first exprs)])
+                               (if ,(second pinfo+tmp-sym)
+                                   ,(second pinfo+tmp-sym)
+                                   ,(second exprs)))
+                            loc)
+                (first pinfo+tmp-sym)))]
         [else
-         (local [(define pinfo+tmp-sym (pinfo-gensym pinfo 'tmp))
-                 (define rest-exprs+pinfo (desugar-or (rest exprs) loc (first pinfo+tmp-sym)))]
-           (desugar-expression/expr+pinfo
-            (list (datum->stx #f `(let ([,(second pinfo+tmp-sym) ,(first exprs)])
-                                    (if ,(second pinfo+tmp-sym)
-                                        ,(second pinfo+tmp-sym)
-                                        ,(first rest-exprs+pinfo)))
-                              loc)
-                  (second rest-exprs+pinfo))))]))
+         (define pinfo+tmp-sym (pinfo-gensym pinfo 'tmp))
+         (define rest-exprs+pinfo (desugar-or (rest exprs) loc (first pinfo+tmp-sym)))
+         (desugar-expression/expr+pinfo
+          (list (datum->stx #f `(let ([,(second pinfo+tmp-sym) ,(first exprs)])
+                                  (if ,(second pinfo+tmp-sym)
+                                      ,(second pinfo+tmp-sym)
+                                      ,(first rest-exprs+pinfo)))
+                            loc)
+                (second rest-exprs+pinfo)))]))
 
 
 
@@ -526,16 +524,16 @@
                                (stx-loc expr))
     (check-duplicate-identifiers! (stx-e (second (stx-e expr))))
     
-    (local [(define lambda-symbol-stx (first (stx-e expr)))
-            (define args (second (stx-e expr)))
-            (define body (third (stx-e expr)))
-            (define desugared-body+pinfo (desugar-expression body pinfo))]
-      (list (datum->stx #f (list lambda-symbol-stx
-                                 args
-                                 (first desugared-body+pinfo))
-                        (stx-loc expr))
-            ;; FIXME: I should extend the pinfo with the identifiers in the arguments.
-            (second desugared-body+pinfo)))))
+    (define lambda-symbol-stx (first (stx-e expr)))
+    (define args (second (stx-e expr)))
+    (define body (third (stx-e expr)))
+    (define desugared-body+pinfo (desugar-expression body pinfo))
+    (list (datum->stx #f (list lambda-symbol-stx
+                               args
+                               (first desugared-body+pinfo))
+                      (stx-loc expr))
+          ;; FIXME: I should extend the pinfo with the identifiers in the arguments.
+          (second desugared-body+pinfo))))
 
 
 
@@ -562,17 +560,17 @@
        (raise (make-moby-error (stx-loc expr)
                                (make-moby-error-type:when-no-body)))]
       [else
-       (local [(define test-stx (second (stx-e expr)))
-               (define desugared-body+pinfo (desugar-expressions (rest (stx-e expr)) pinfo))
-               (define body-stx (datum->stx #f 
-                                            `(begin ,@(first desugared-body+pinfo))
-                                            (stx-loc expr)))]
-         (list (datum->stx #f
-                           `(if ,test-stx
-                                ,body-stx
-                                (void))
-                           (stx-loc expr))
-               (second desugared-body+pinfo)))])))
+       (define test-stx (second (stx-e expr)))
+       (define desugared-body+pinfo (desugar-expressions (rest (stx-e expr)) pinfo))
+       (define body-stx (datum->stx #f 
+                                    `(begin ,@(first desugared-body+pinfo))
+                                    (stx-loc expr)))
+       (list (datum->stx #f
+                         `(if ,test-stx
+                              ,body-stx
+                              (void))
+                         (stx-loc expr))
+             (second desugared-body+pinfo))])))
 
 
 ;; desugar-unless: expr pinfo -> (list expr pinfo)
@@ -589,17 +587,17 @@
        (raise (make-moby-error (stx-loc expr)
                                (make-moby-error-type:unless-no-body)))]
       [else
-       (local [(define test-stx (second (stx-e expr)))
-               (define desugared-body+pinfo (desugar-expressions (rest (stx-e expr)) pinfo))
-               (define body-stx (datum->stx #f 
-                                            `(begin ,@(first desugared-body+pinfo))
-                                            (stx-loc expr)))]
-         (list (datum->stx #f
-                           `(if ,test-stx
-                                (void)
-                                ,body-stx)
-                           (stx-loc expr))
-               (second desugared-body+pinfo)))])))
+       (define test-stx (second (stx-e expr)))
+       (define desugared-body+pinfo (desugar-expressions (rest (stx-e expr)) pinfo))
+       (define body-stx (datum->stx #f 
+                                    `(begin ,@(first desugared-body+pinfo))
+                                    (stx-loc expr)))
+       (list (datum->stx #f
+                         `(if ,test-stx
+                              (void)
+                              ,body-stx)
+                         (stx-loc expr))
+             (second desugared-body+pinfo))])))
 
 
 
@@ -609,15 +607,15 @@
   (begin
     (check-syntax-application! expr (lambda (expr)
                                       '(set! x 17)))
-    (local [(define set-symbol-stx (first (stx-e expr)))
-            (define id (second (stx-e expr)))
-            (define value (third (stx-e expr)))
-            (define desugared-value+pinfo (desugar-expression value pinfo))]
-      (list (datum->stx #f (list set-symbol-stx
-                                 id
-                                 (first desugared-value+pinfo))
-                        (stx-loc expr))
-            (second desugared-value+pinfo)))))
+    (define set-symbol-stx (first (stx-e expr)))
+    (define id (second (stx-e expr)))
+    (define value (third (stx-e expr)))
+    (define desugared-value+pinfo (desugar-expression value pinfo))
+    (list (datum->stx #f (list set-symbol-stx
+                               id
+                               (first desugared-value+pinfo))
+                      (stx-loc expr))
+          (second desugared-value+pinfo))))
 
 
 
@@ -630,80 +628,79 @@
 ;; helpers for building syntax objects, because it's really painful
 ;; to build syntax expanders without linguistic support.
 (define (desugar-case an-expr pinfo)
-  (local
-    [(define pinfo+val-sym (pinfo-gensym pinfo 'val))
-     (define updated-pinfo-1 (first pinfo+val-sym))
-     (define val-stx (datum->stx #f (second pinfo+val-sym) (stx-loc an-expr)))
-     
-     (define pinfo+x-sym (pinfo-gensym updated-pinfo-1 'x))
-     (define updated-pinfo-2 (first pinfo+x-sym))
-     (define x-stx (datum->stx #f (second pinfo+x-sym) (stx-loc an-expr)))     
-     
-     ;; predicate: stx
-     (define predicate
-       (datum->stx #f 
-                   (list 'lambda (list x-stx)
-                         (list 'equal? x-stx val-stx))
-                   (stx-loc an-expr)))
-     
-     
-     ;; loop: (listof stx) (listof stx) stx stx -> stx
-     (define (loop list-of-datum answers datum-last answer-last)
+  (define pinfo+val-sym (pinfo-gensym pinfo 'val))
+  (define updated-pinfo-1 (first pinfo+val-sym))
+  (define val-stx (datum->stx #f (second pinfo+val-sym) (stx-loc an-expr)))
+  
+  (define pinfo+x-sym (pinfo-gensym updated-pinfo-1 'x))
+  (define updated-pinfo-2 (first pinfo+x-sym))
+  (define x-stx (datum->stx #f (second pinfo+x-sym) (stx-loc an-expr)))     
+  
+  ;; predicate: stx
+  (define predicate
+    (datum->stx #f 
+                (list 'lambda (list x-stx)
+                      (list 'equal? x-stx val-stx))
+                (stx-loc an-expr)))
+  
+  
+  ;; loop: (listof stx) (listof stx) stx stx -> stx
+  (define (loop list-of-datum answers datum-last answer-last)
+    (cond
+      [(empty? list-of-datum)
+       (if (and (symbol? (stx-e datum-last)) (eq? 'else (stx-e datum-last)))
+           answer-last
+           (datum->stx #f (list (datum->stx #f 'if (stx-loc an-expr))
+                                (datum->stx #f (list (datum->stx #f 'ormap (stx-loc an-expr))
+                                                     predicate
+                                                     (datum->stx #f (list (datum->stx #f 'quote (stx-loc an-expr))
+                                                                          datum-last)
+                                                                 (stx-loc an-expr)))
+                                            (stx-loc an-expr))
+                                answer-last
+                                (datum->stx #f (list (datum->stx #f 'void (stx-loc an-expr)))
+                                            (stx-loc an-expr)))
+                       (stx-loc an-expr)))]
+      [else
        (cond
-         [(empty? list-of-datum)
-          (if (and (symbol? (stx-e datum-last)) (eq? 'else (stx-e datum-last)))
-              answer-last
-              (datum->stx #f (list (datum->stx #f 'if (stx-loc an-expr))
-                                   (datum->stx #f (list (datum->stx #f 'ormap (stx-loc an-expr))
-                                                        predicate
-                                                        (datum->stx #f (list (datum->stx #f 'quote (stx-loc an-expr))
-                                                                             datum-last)
-                                                                    (stx-loc an-expr)))
-                                               (stx-loc an-expr))
-                                   answer-last
-                                   (datum->stx #f (list (datum->stx #f 'void (stx-loc an-expr)))
-                                               (stx-loc an-expr)))
-                          (stx-loc an-expr)))]
+         [(not (list? (stx-e (first list-of-datum))))
+          (raise (make-moby-error (stx-loc (first list-of-datum))
+                                  (make-moby-error-type:generic-syntactic-error
+                                   (format "case needs a list of values for each clause, but sees ~s instead"
+                                           (stx->datum (first list-of-datum)))
+                                   (list))))]
          [else
-          (cond
-            [(not (list? (stx-e (first list-of-datum))))
-             (raise (make-moby-error (stx-loc (first list-of-datum))
-                                     (make-moby-error-type:generic-syntactic-error
-                                      (format "case needs a list of values for each clause, but sees ~s instead"
-                                              (stx->datum (first list-of-datum)))
-                                      (list))))]
-            [else
-             (datum->stx #f (list (datum->stx #f 'if (stx-loc an-expr))
-                                  (datum->stx #f (list (datum->stx #f 'ormap (stx-loc an-expr))
-                                                       predicate
-                                                       (datum->stx #f (list (datum->stx #f 'quote (stx-loc an-expr))
-                                                                            (first list-of-datum))
-                                                                   (stx-loc an-expr)))
-                                              (stx-loc an-expr))
-                                  (first answers)
-                                  (loop (rest list-of-datum)
-                                        (rest answers)
-                                        datum-last
-                                        answer-last))
-                         (stx-loc an-expr))])]))]
-    
-    (begin
-      (check-syntax-application! an-expr (lambda (an-expr)
-                                           '(case (+ 3 4)
-                                              [(6 8)
-                                               'unexpected]
-                                              [(7)
-                                               'ok])))
-      (desugar-expression/expr+pinfo
-       (deconstruct-clauses-with-else (rest (rest (stx-e an-expr)))
-                                      (lambda (else-stx)
-                                        else-stx)
-                                      (lambda (questions answers question-last answer-last)
-                                        (list (datum->stx #f 
-                                                          (list 'let (list (list val-stx (second (stx-e an-expr))))
-                                                                (loop questions answers question-last answer-last))
-                                                          (stx-loc an-expr))
-                                              updated-pinfo-2)))))))
+          (datum->stx #f (list (datum->stx #f 'if (stx-loc an-expr))
+                               (datum->stx #f (list (datum->stx #f 'ormap (stx-loc an-expr))
+                                                    predicate
+                                                    (datum->stx #f (list (datum->stx #f 'quote (stx-loc an-expr))
+                                                                         (first list-of-datum))
+                                                                (stx-loc an-expr)))
+                                           (stx-loc an-expr))
+                               (first answers)
+                               (loop (rest list-of-datum)
+                                     (rest answers)
+                                     datum-last
+                                     answer-last))
+                      (stx-loc an-expr))])]))
+  
+  (begin
+    (check-syntax-application! an-expr (lambda (an-expr)
+                                         '(case (+ 3 4)
+                                            [(6 8)
+                                             'unexpected]
+                                            [(7)
+                                             'ok])))
+    (desugar-expression/expr+pinfo
+     (deconstruct-clauses-with-else (rest (rest (stx-e an-expr)))
+                                    (lambda (else-stx)
+                                      else-stx)
+                                    (lambda (questions answers question-last answer-last)
+                                      (list (datum->stx #f 
+                                                        (list 'let (list (list val-stx (second (stx-e an-expr))))
+                                                              (loop questions answers question-last answer-last))
+                                                        (stx-loc an-expr))
+                                            updated-pinfo-2))))))
 
 
 
@@ -711,15 +708,15 @@
 ;; tag-application-operator/module: stx module-name -> stx
 ;; Adjust the lexical context of the operator so it refers to the environment of a particular module.
 (define (tag-application-operator/module an-application-stx a-module-name)
-  (local [(define an-id-stx (first (stx-e an-application-stx)))
-          (define operands (rest (stx-e an-application-stx)))]
-    (datum->stx an-application-stx
-                `(,(stx-update-context 
-                    an-id-stx
-                    (extend-env/module-binding empty-env
-                                               (default-module-resolver a-module-name)))
-                  ,@operands)
-                (stx-loc an-application-stx))))
+  (define an-id-stx (first (stx-e an-application-stx)))
+  (define operands (rest (stx-e an-application-stx)))
+  (datum->stx an-application-stx
+              `(,(stx-update-context 
+                  an-id-stx
+                  (extend-env/module-binding empty-env
+                                             (default-module-resolver a-module-name)))
+                ,@operands)
+              (stx-loc an-application-stx)))
 
 
 ;; desugar-cond: stx:list -> (list stx:list pinfo)
@@ -729,56 +726,55 @@
     (check-syntax-application! an-expr (lambda (expr) 
                                          '(cond [(even? 42) 'ok]
                                                 [(odd? 42) 'huh?])))
-    (local
-      [(define cond-clauses (rest (stx-e an-expr)))
-       
-       (define (check-clause-structures!)
-         (for-each (lambda (a-clause)
-                     (cond [(not (list? (stx-e a-clause)))
-                            (raise (make-moby-error (stx-loc a-clause)
-                                                    (make-moby-error-type:conditional-malformed-clause)))]
-                           [(< (length (stx-e a-clause)) 2)
-                            (raise (make-moby-error (stx-loc a-clause)
-                                                    (make-moby-error-type:conditional-clause-too-few-elements)))]
-                           [(> (length (stx-e a-clause)) 2)
-                            (raise (make-moby-error (stx-loc a-clause)
-                                                    (make-moby-error-type:conditional-clause-too-many-elements)))]
-                           [else
-                            (void)]))
-                   cond-clauses))
-       
-       
-       ;; loop: (listof stx) (listof stx) stx stx -> stx
-       (define (loop questions answers question-last answer-last)
-         (cond
-           [(empty? questions)
-            (datum->stx #f `(if ,question-last 
-                                ,answer-last
-                                ,(make-cond-exhausted-expression (stx-loc an-expr)))
-                        (stx-loc an-expr))]
-           
-           [else
-            (datum->stx #f `(if ,(first questions)
-                                ,(first answers)
-                                ,(loop (rest questions)
-                                       (rest answers)
-                                       question-last
-                                       answer-last))
-                        (stx-loc an-expr))]))]
+    (define cond-clauses (rest (stx-e an-expr)))
+    
+    (define (check-clause-structures!)
+      (for-each (lambda (a-clause)
+                  (cond [(not (list? (stx-e a-clause)))
+                         (raise (make-moby-error (stx-loc a-clause)
+                                                 (make-moby-error-type:conditional-malformed-clause)))]
+                        [(< (length (stx-e a-clause)) 2)
+                         (raise (make-moby-error (stx-loc a-clause)
+                                                 (make-moby-error-type:conditional-clause-too-few-elements)))]
+                        [(> (length (stx-e a-clause)) 2)
+                         (raise (make-moby-error (stx-loc a-clause)
+                                                 (make-moby-error-type:conditional-clause-too-many-elements)))]
+                        [else
+                         (void)]))
+                cond-clauses))
+    
+    
+    ;; loop: (listof stx) (listof stx) stx stx -> stx
+    (define (loop questions answers question-last answer-last)
       (cond
-        [(empty? cond-clauses)
-         (raise (make-moby-error (stx-loc an-expr)
-                                 (make-moby-error-type:conditional-missing-question-answer)))]
+        [(empty? questions)
+         (datum->stx #f `(if ,question-last 
+                             ,answer-last
+                             ,(make-cond-exhausted-expression (stx-loc an-expr)))
+                     (stx-loc an-expr))]
+        
         [else
-         (begin
-           (check-clause-structures!)
-           (desugar-expression/expr+pinfo
-            (deconstruct-clauses-with-else cond-clauses
-                                           (lambda (else-stx)
-                                             (datum->stx #f 'true (stx-loc else-stx)))
-                                           (lambda (questions answers question-last answer-last)
-                                             (list (loop questions answers question-last answer-last)
-                                                   pinfo)))))]))))
+         (datum->stx #f `(if ,(first questions)
+                             ,(first answers)
+                             ,(loop (rest questions)
+                                    (rest answers)
+                                    question-last
+                                    answer-last))
+                     (stx-loc an-expr))]))
+    (cond
+      [(empty? cond-clauses)
+       (raise (make-moby-error (stx-loc an-expr)
+                               (make-moby-error-type:conditional-missing-question-answer)))]
+      [else
+       (begin
+         (check-clause-structures!)
+         (desugar-expression/expr+pinfo
+          (deconstruct-clauses-with-else cond-clauses
+                                         (lambda (else-stx)
+                                           (datum->stx #f 'true (stx-loc else-stx)))
+                                         (lambda (questions answers question-last answer-last)
+                                           (list (loop questions answers question-last answer-last)
+                                                 pinfo)))))])))
 
 
 ;; check-syntax-application!: stx (stx -> void) -> void
@@ -821,32 +817,31 @@
 ;; Helper for functions that need to destruct a list of 
 ;; clauses of the form ([question answer] ... [else answer-last]).
 (define (deconstruct-clauses-with-else clauses else-replacement-f f)
-  (local 
-    [;; process-clauses: (listof stx) (listof stx) (listof stx) -> X
-     (define (process-clauses clauses questions/rev answers/rev)
-       (cond
-         [(stx-begins-with? (first clauses) 'else)
-          (if (not (empty? (rest clauses)))
-              (raise (make-moby-error (stx-loc (first clauses))
-                                      (make-moby-error-type:generic-syntactic-error
-                                       "else clause should be the last, but there's another clause after it" 
-                                       (list)
-                                       )))
-              (f (reverse questions/rev) 
-                 (reverse answers/rev) 
-                 (else-replacement-f (first (stx-e (first clauses))))
-                 (second (stx-e (first clauses)))))]
-         
-         [(empty? (rest clauses))
-          (f (reverse questions/rev)
-             (reverse answers/rev) 
-             (first (stx-e (first clauses)))
-             (second (stx-e (first clauses))))]
-         [else
-          (process-clauses (rest clauses)
-                           (cons (first (stx-e (first clauses))) questions/rev) 
-                           (cons (second (stx-e (first clauses))) answers/rev))]))]
-    (process-clauses clauses empty empty)))
+  ;; process-clauses: (listof stx) (listof stx) (listof stx) -> X
+  (define (process-clauses clauses questions/rev answers/rev)
+    (cond
+      [(stx-begins-with? (first clauses) 'else)
+       (if (not (empty? (rest clauses)))
+           (raise (make-moby-error (stx-loc (first clauses))
+                                   (make-moby-error-type:generic-syntactic-error
+                                    "else clause should be the last, but there's another clause after it" 
+                                    (list)
+                                    )))
+           (f (reverse questions/rev) 
+              (reverse answers/rev) 
+              (else-replacement-f (first (stx-e (first clauses))))
+              (second (stx-e (first clauses)))))]
+      
+      [(empty? (rest clauses))
+       (f (reverse questions/rev)
+          (reverse answers/rev) 
+          (first (stx-e (first clauses)))
+          (second (stx-e (first clauses))))]
+      [else
+       (process-clauses (rest clauses)
+                        (cons (first (stx-e (first clauses))) questions/rev) 
+                        (cons (second (stx-e (first clauses))) answers/rev))]))
+  (process-clauses clauses empty empty))
 
 
 
@@ -866,7 +861,7 @@
                                                        [y 4])
                                                    (+ x y))))
     (check-list-of-key-value-pairs! (second (stx-e a-stx)))
-    (local [(define clauses-stx (second (stx-e a-stx)))
+    (define clauses-stx (second (stx-e a-stx)))
             (define body-stx (third (stx-e a-stx)))
             (define ids (map (lambda (clause)
                                (first (stx-e clause)))
@@ -879,7 +874,7 @@
               (datum->stx #f (list (datum->stx #f 'lambda (stx-loc a-stx))
                                    (datum->stx #f ids (stx-loc a-stx))
                                    body-stx)
-                          (stx-loc a-stx)))]    
+                          (stx-loc a-stx)))    
       (begin
         (check-single-body-stx! (rest (rest (stx-e a-stx))) a-stx)
         (check-duplicate-identifiers! (map (lambda (a-clause)
@@ -888,7 +883,7 @@
         (desugar-expression/expr+pinfo 
          (list (datum->stx #f (cons new-lambda-stx vals)
                            (stx-loc a-stx))
-               pinfo))))))
+               pinfo)))))
 
 
 ;; check-list-of-key-value-pairs!: stx -> void
@@ -928,7 +923,7 @@
                                                         [y 4])
                                                    (+ x y))))
     (check-list-of-key-value-pairs! (second (stx-e a-stx)))
-    (local [(define clauses-stx (second (stx-e a-stx)))
+    (define clauses-stx (second (stx-e a-stx)))
             (define body-stx (third (stx-e a-stx)))
             
             ;; loop: (listof stx) -> stx
@@ -941,12 +936,12 @@
                                       (datum->stx #f (list (first clauses))
                                                   (stx-loc (first clauses)))
                                       (loop (rest clauses)))
-                             (stx-loc (first clauses)))]))]    
+                             (stx-loc (first clauses)))]))    
       (begin
         (check-single-body-stx! (rest (rest (stx-e a-stx))) a-stx)
         (desugar-expression/expr+pinfo 
          (list (loop (stx-e clauses-stx))
-               pinfo))))))
+               pinfo)))))
 
 
 ;; desugar-letrec: stx pinfo -> (list stx pinfo)
@@ -968,24 +963,24 @@
                                                                    (* x (f (- x 1)))))])
                                                    (f 3))))
     (check-list-of-key-value-pairs! (second (stx-e a-stx)))
-    (local [(define clauses-stx (second (stx-e a-stx)))
-            (define body-stx (third (stx-e a-stx)))
-            (define define-clauses
-              (map (lambda (a-clause)
-                     (local [(define name (first (stx-e a-clause)))
-                             (define val (second (stx-e a-clause)))]
-                       (datum->stx #f (list 'define name val)
-                                   (stx-loc a-clause))))
-                   (stx-e clauses-stx)))]
-      (begin
-        (check-single-body-stx! (rest (rest (stx-e a-stx))) a-stx)
-        (check-duplicate-identifiers! (map (lambda (a-clause) (first (stx-e a-clause)))
-                                           (stx-e clauses-stx)))
-        (desugar-expression/expr+pinfo 
-         (list (datum->stx #f 
-                           (list 'local define-clauses body-stx)
-                           (stx-loc a-stx))
-               pinfo))))))
+    (define clauses-stx (second (stx-e a-stx)))
+    (define body-stx (third (stx-e a-stx)))
+    (define define-clauses
+      (map (lambda (a-clause)
+             (define name (first (stx-e a-clause)))
+             (define val (second (stx-e a-clause)))
+             (datum->stx #f (list 'define name val)
+                         (stx-loc a-clause)))
+           (stx-e clauses-stx)))
+    (begin
+      (check-single-body-stx! (rest (rest (stx-e a-stx))) a-stx)
+      (check-duplicate-identifiers! (map (lambda (a-clause) (first (stx-e a-clause)))
+                                         (stx-e clauses-stx)))
+      (desugar-expression/expr+pinfo 
+       (list (datum->stx #f 
+                         (list 'local define-clauses body-stx)
+                         (stx-loc a-stx))
+             pinfo)))))
 
 
 ;; check-single-argument-form!: stx (-> moby-error-type) (-> moby-error-type) -> void
@@ -1005,7 +1000,7 @@
 
 ;; desugar-quasiquote: stx pinfo -> (list stx pinfo)
 (define (desugar-quasiquote a-stx pinfo)
-  (local [;; handle-quoted: stx depth -> stx
+  ;; handle-quoted: stx depth -> stx
           (define (handle-quoted a-stx depth)
             (cond
               [(stx:list? a-stx)
@@ -1110,13 +1105,13 @@
                  [(> depth 0)
                   (datum->stx #f (list 'quote a-stx) (stx-loc a-stx))]
                  [else
-                  a-stx])]))]
+                  a-stx])]))
     (begin
       (check-syntax-application! a-stx (lambda (a-stx)
                                          '(quasiquote x)))
       (desugar-expression/expr+pinfo 
        (list (handle-quoted a-stx 0) 
-             pinfo)))))
+             pinfo))))
 
 
 
@@ -1182,6 +1177,6 @@
 (define THE-DEFAULT-SYNTACTIC-ENVIRONMENT (make-default-syntax-env))
 
 
-(provide/contract
- [desugar-program (program? pinfo? . -> . (list/c program? pinfo?))]
- [tag-application-operator/module (stx? symbol? . -> . stx?)]) 
+(provide
+ desugar-program
+ tag-application-operator/module)

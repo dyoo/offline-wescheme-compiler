@@ -4,10 +4,7 @@
          "helpers.rkt"
          "stx.rkt"
          "error-struct.rkt"
-         "binding.rkt"
-         racket/local
-         racket/bool
-         racket/contract)
+         "binding.rkt")
 
 ;; An env collects a set of bindings.
 (define-struct env (bindings))
@@ -41,11 +38,11 @@
 
 ;; env-lookup: env symbol -> (or/c binding false)
 (define (env-lookup an-env name)
-  (local [(define result (rbtree-lookup symbol< (env-bindings an-env) name))]
-    (cond [(pair? result)
-           (cadr result)]
-          [else
-           #f])))
+  (define result (rbtree-lookup symbol< (env-bindings an-env) name))
+  (cond [(pair? result)
+         (cadr result)]
+        [else
+         #f]))
 
 
 ;; env-contains?: env symbol -> boolean
@@ -89,26 +86,25 @@
   (cond
     [(env? (stx-context an-id-stx))
      (cond [(not (env-contains? (stx-context an-id-stx) (stx-e an-id-stx)))
-            false]
+            #f]
            [else
             (env-lookup (stx-context an-id-stx) (stx-e an-id-stx))])]
     [else
      (cond [(not (env-contains? an-env (stx-e an-id-stx)))
-            false]
+            #f]
            [else
             (env-lookup an-env (stx-e an-id-stx))])]))
 
 
 
-(provide/contract  
- [struct env ([bindings (listof binding?)])]
- [empty-env env?]
- [env-extend (env? binding? . -> . env?)]
- [env-lookup (env? symbol? . -> . (or/c false/c binding?))]
- [env-lookup/context (env? stx? . -> . (or/c false/c binding?))]
- [env-contains? (env? symbol? . -> . boolean?)]
- [env-keys (env? . -> . (listof symbol?))]
+(provide
+ [struct-out env]
+ empty-env
+ env-extend
+ env-lookup
+ env-lookup/context
+ env-contains?
+ env-keys
  
- [env-extend-constant (env? symbol? (or/c module-path? false/c) . -> . env?)]
- [env-extend-function (env? symbol? (or/c module-path? false/c) number? boolean? 
-                       . -> . env?)])
+ env-extend-constant
+ env-extend-function)
