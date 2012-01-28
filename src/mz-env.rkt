@@ -1,8 +1,5 @@
 #lang racket/base
 
-(require racket/contract
-         racket/match
-         racket/list)
 
 ;; Representation of the stack environment of the mzscheme vm, so we know where
 ;; things live.
@@ -14,7 +11,6 @@
 (define-struct (unnamed-env env) (parent-env) #:transparent)
 
 (define EMPTY-ENV (make-empty-env))
-
 
 
 
@@ -40,15 +36,15 @@
 
 ;; env-pop: env -> env
 (define (env-pop env)
-  (match env
-    [(struct empty-env ())
+  (cond
+    [(empty-env? env)
      (error 'env-pop "empty env")]
-    [(struct local-env (name boxed? parent-env))
-     parent-env]
-    [(struct global-env (names parent-env))
-     parent-env]
-    [(struct unnamed-env (parent-env))
-     parent-env]))
+    [(local-env? env)
+     (local-env-parent-env env)]
+    [(global-env? env)
+     (global-env-parent-env env)]
+    [(unnamed-env? env)
+     (unnamed-env-parent-env env)]))
 
 
 
@@ -65,31 +61,36 @@
   (let loop ([i 0]
              [L L])
     (cond
-      [(empty? L)
+      [(null? L)
        #f]
-      [(eq? x (first L))
+      [(eq? x (car L))
        i]
       [else
        (loop (add1 i)
-             (rest L))])))
+             (cdr L))])))
 
 
 ;; env-lookup: env symbol -> stack-reference
 (define (env-lookup env a-name)
   (let loop ([env env]
              [depth 0])
-    (match env
-      [(struct empty-env ())
+    (cond
+      [(empty-env? env)
        (make-unbound-stack-reference a-name)]
       
-      [(struct local-env (name boxed? parent-env))
+      [(local-env? env)
+       (define name (local-env-name env))
+       (define boxed? (local-env-boxed? env))
+       (define parent-env (local-env-parent-env env))
        (cond
          [(eq? a-name name)
           (make-local-stack-reference name boxed? depth)]
          [else 
           (loop parent-env (add1 depth))])]
       
-      [(struct global-env (names parent-env))
+      [(global-env? env)
+       (define names (global-env-names env))
+       (define parent-env (global-env-parent-env env))
        (cond [(position a-name names)
               =>
               (lambda (pos)
@@ -97,8 +98,8 @@
              [else
               (loop parent-env (add1 depth))])]
       
-      [(struct unnamed-env (parent-env))
-       (loop parent-env (add1 depth))])))
+      [(unnamed-env? env)
+       (loop (unnamed-env-parent-env env) (add1 depth))])))
 
 
 ;; env-peek: env number -> env
@@ -109,45 +110,35 @@
       [(= depth 0)
        env]
       [else
-       (match env
-         [(struct empty-env ())
+       (cond
+         [(empty-env? env)
           (error 'env-peek)]
          
-         [(struct local-env (name boxed? parent-env))
-          (loop parent-env (sub1 depth))]
+         [(local-env? env)
+          (loop (local-env-parent-env env) (sub1 depth))]
 
-         [(struct global-env (names parent-env))
-          (loop parent-env (sub1 depth))]
-         [(struct unnamed-env (parent-env))
-          (loop parent-env (sub1 depth))])])))
+         [(global-env? env)
+          (loop (global-env-parent-env env) (sub1 depth))]
+         [(unnamed-env? env)
+          (loop (unnamed-env-parent-env env) (sub1 depth))])])))
                  
          
 
-
-
-(provide/contract [env? (any/c . -> . boolean?)]
-                  [rename EMPTY-ENV empty-env env?]
-                  [env-push-globals (env? (listof (or/c false/c symbol?)) . -> . env?)]
-                  [env-push-local (env? symbol? . -> . env?)]
-                  [env-push-local/boxed (env? symbol? . -> . env?)]
-                  [env-push-unnamed (env? . -> . env?)]
-                  [env-pop (env? . -> . env?)]
-
-                  [env-lookup (env? symbol? . -> . stack-reference?)]
-
-                  [env-peek (env? number? . -> . env?)]
-                  
-                  [struct global-env ([names (listof (or/c false/c symbol?))]
-                                      [parent-env (listof env?)])]
-                  
-                  [struct stack-reference ()]
-                  [struct (local-stack-reference stack-reference) 
-                          [(name symbol?)
-                           (boxed? boolean?)
-                           (depth number?)]]
-                  [struct (global-stack-reference stack-reference)
-                          [(name symbol?)
-                           (depth number?)
-                           (pos number?)]]
-                  [struct (unbound-stack-reference stack-reference)
-                          [(name symbol?)]])
+(provide env? 
+         (rename-out (EMPTY-ENV empty-env))
+         env-push-globals
+         env-push-local
+         env-push-local/boxed
+         env-push-unnamed
+         env-pop
+         
+         env-lookup
+         
+         env-peek
+         
+         (struct-out global-env)
+         
+         (struct-out stack-reference)
+         (struct-out local-stack-reference)
+         (struct-out global-stack-reference)
+         (struct-out unbound-stack-reference))

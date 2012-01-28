@@ -1,7 +1,6 @@
 #lang racket/base
 
-(require racket/contract
-         "stx.rkt"
+(require "stx.rkt"
          "arity-struct.rkt")
 
 (define-struct moby-error (location error-type))
@@ -213,132 +212,98 @@
 
 
 
+(provide
+ moby-error-type?
+ [struct-out moby-error]
+                     
+ 
+ [struct-out moby-error-type:unclosed-lexical-token]
+ [struct-out moby-error-type:unrecognized-lexical-token]
+ [struct-out moby-error-type:unsupported-lexical-token]
+ [struct-out moby-error-type:unsupported-expression-form]
+ [struct-out moby-error-type:unclosed-parentheses]
+ [struct-out moby-error-type:unbalanced-parentheses]
+ [struct-out moby-error-type:closing-parenthesis-before-opener]
+ [struct-out moby-error-type:syntax-not-applied]
+ [struct-out moby-error-type:duplicate-identifier]
+ [struct-out moby-error-type:expected-identifier]
+ [struct-out moby-error-type:expected-list-of-identifiers]
+ [struct-out moby-error-type:undefined-identifier]
+ [struct-out moby-error-type:structure-identifier-not-expression]
+ [struct-out moby-error-type:provided-name-not-defined]
+ [struct-out moby-error-type:provided-structure-not-structure]
+ [struct-out moby-error-type:unknown-module]
+ [struct-out moby-error-type:redefinition-not-allowed]
+ 
+ [struct-out moby-error-type:conditional-missing-question-answer]    ;; missing clauses
+ [struct-out moby-error-type:conditional-malformed-clause]           ;; a clause which isn't an [question answer]
+ [struct-out moby-error-type:conditional-clause-too-few-elements]  ;; a clause without a question or an answer
+ [struct-out moby-error-type:conditional-clause-too-many-elements] ;; a clause with too many answer values
+ [struct-out moby-error-type:conditional-exhausted]             ;; runtime: no answer was true
+ 
+ [struct-out moby-error-type:branch-value-not-boolean]
+ 
+ [struct-out moby-error-type:if-too-few-elements]   ;; e.g. (if x)
+ [struct-out moby-error-type:if-too-many-elements]  ;; (if x y z w)
 
-(provide/contract
- [struct moby-error ([location Loc?]
-                     [error-type moby-error-type?])]
+ [struct-out moby-error-type:begin-body-empty]      ;; e.g. (begin)
+ 
+ [struct-out moby-error-type:boolean-chain-too-few-elements]
+ [struct-out moby-error-type:lambda-too-many-elements]
+ [struct-out moby-error-type:lambda-too-few-elements]
 
- [moby-error-type? (any/c . -> . boolean?)]
- [struct moby-error-type:unclosed-lexical-token ([type string?]
-                                                 [opener symbol?]
-                                                 [closer symbol?])]
- [struct moby-error-type:unrecognized-lexical-token ([token symbol?])]
- [struct moby-error-type:unsupported-lexical-token ([token symbol?])]
- [struct moby-error-type:unsupported-expression-form ([expr stx?])]
+ [struct-out moby-error-type:missing-expression-following-quote]
+ [struct-out moby-error-type:quote-too-few-elements]
+ [struct-out moby-error-type:quote-too-many-elements]
+ [struct-out moby-error-type:quasiquote-too-few-elements]
+ [struct-out moby-error-type:quasiquote-too-many-elements]
+ [struct-out moby-error-type:unquote-too-few-elements]
+ [struct-out moby-error-type:unquote-too-many-elements]
+ [struct-out moby-error-type:unquote-splicing-too-few-elements]
+ [struct-out moby-error-type:unquote-splicing-too-many-elements]
+ 
+ [struct-out moby-error-type:when-no-body]
+ [struct-out moby-error-type:unless-no-body]
+  
+ [struct-out moby-error-type:check-expect]
+ 
+ [struct-out moby-error-type:check-within]
+ 
+ [struct-out moby-error-type:check-error]  ;; the expected string of the error message and the observed string
+ [struct-out moby-error-type:check-error-no-error]
  
  
- [struct moby-error-type:unclosed-parentheses ([opener symbol?]
-                                               [closer symbol?])]
- [struct moby-error-type:unbalanced-parentheses ([opener symbol?]
-                                                 [closer symbol?]
-                                                 [observed symbol?]
-                                                 [other-location Loc?])]
- [struct moby-error-type:closing-parenthesis-before-opener ([closer symbol?])]
- [struct moby-error-type:syntax-not-applied ([keyword stx?]
-                                             [example any/c])]
- 
- [struct moby-error-type:duplicate-identifier ([id symbol?]
-                                               [second-location Loc?])]
- [struct moby-error-type:expected-identifier ([observed stx?])]
- [struct moby-error-type:expected-list-of-identifiers ([who stx?]
-                                                       [observed stx?])]
- [struct moby-error-type:undefined-identifier ([id symbol?])]
- [struct moby-error-type:structure-identifier-not-expression ([id symbol?])]
- [struct moby-error-type:provided-name-not-defined ([id symbol?])]
- [struct moby-error-type:provided-structure-not-structure ([id symbol?])]
- 
- [struct moby-error-type:unknown-module ([path module-path?])]
+ [struct-out moby-error-type:application-arity]
+ [struct-out moby-error-type:application-operator-not-a-function    ;; who is the operator
+                                                                    ;; what value 
+                                                                    ;; did the operator produce?
+                                                              ]
+ [struct-out moby-error-type:type-mismatch]
+ [struct-out moby-error-type:index-out-of-bounds]
 
- [struct moby-error-type:redefinition-not-allowed ([id symbol?])]
- 
- [struct moby-error-type:conditional-missing-question-answer ()] ;; missing clauses
- [struct moby-error-type:conditional-malformed-clause ()]           ;; a clause which isn't an [question answer]
- [struct moby-error-type:conditional-clause-too-few-elements ()]  ;; a clause without a question or an answer
- [struct moby-error-type:conditional-clause-too-many-elements ()] ;; a clause with too many answer values
- [struct moby-error-type:conditional-exhausted ()]             ;; runtime: no answer was true
- 
- [struct moby-error-type:branch-value-not-boolean ([observed any/c])]
- 
- [struct moby-error-type:if-too-few-elements ()]   ;; e.g. (if x)
- [struct moby-error-type:if-too-many-elements ()]  ;; (if x y z w)
-
- [struct moby-error-type:begin-body-empty ()]      ;; e.g. (begin)
- 
-
- [struct moby-error-type:boolean-chain-too-few-elements ([id symbol?])]
-
- [struct moby-error-type:lambda-too-many-elements ()]
- [struct moby-error-type:lambda-too-few-elements ()]
-
- [struct moby-error-type:missing-expression-following-quote ([quote-stx stx?])]
- [struct moby-error-type:quote-too-few-elements ()]
- [struct moby-error-type:quote-too-many-elements ()]
- [struct moby-error-type:quasiquote-too-few-elements ()]
- [struct moby-error-type:quasiquote-too-many-elements ()]
- [struct moby-error-type:unquote-too-few-elements ()]
- [struct moby-error-type:unquote-too-many-elements ()]
- [struct moby-error-type:unquote-splicing-too-few-elements ()]
- [struct moby-error-type:unquote-splicing-too-many-elements ()]
- 
- [struct moby-error-type:when-no-body ()]
- [struct moby-error-type:unless-no-body ()]
- 
- 
- [struct moby-error-type:check-expect ([expected any/c]
-                                       [observed any/c])]
- 
- [struct moby-error-type:check-within ([expected any/c]
-                                       [observed any/c]
-                                       [within any/c])]
- 
- [struct moby-error-type:check-error ([expected string?] ;; the expected string of the error message
-                                      [observed string?])] ;; the observed string
- [struct moby-error-type:check-error-no-error ([expected string?]
-                                               [observed any/c])]
- 
- 
- [struct moby-error-type:application-arity ([who any/c]
-                                            [expected arity?]
-                                            [observed any/c])]
- [struct moby-error-type:application-operator-not-a-function ([who any/c]   ;; who is the operator
-                                                              [val any/c]   ;; what value 
-                                                                            ;; did the operator produce?
-                                                              )]
- [struct moby-error-type:type-mismatch ([who any/c]
-                                        [position number?]
-                                        [expected any/c]
-                                        [observed any/c])]
- [struct moby-error-type:index-out-of-bounds ([minimum number?]
-                                              [maximum number?]
-                                              [observed number?])]
-
- [struct moby-error-type:generic-runtime-error ([reason string?])]
- [struct moby-error-type:generic-syntactic-error ([reason string?]
-                                                  [other-locations (listof Loc?)])]
+ [struct-out moby-error-type:generic-runtime-error]
+ [struct-out moby-error-type:generic-syntactic-error]
  
 
- [struct moby-error-type:generic-read-error ([message string?]
-                                             [locations (listof Loc?)])]
+ [struct-out moby-error-type:generic-read-error]
+  
  
- 
- 
- 
- [moby-expected? (any/c . -> . boolean?)]
- [struct moby-expected:string ()]
- [struct moby-expected:integer ()]
- [struct moby-expected:natural ()]
- [struct moby-expected:rational ()]
- [struct moby-expected:real ()]
- [struct moby-expected:complex ()]
- [struct moby-expected:number ()]
- [struct moby-expected:boolean ()]
- [struct moby-expected:char ()]
- [struct moby-expected:symbol ()]
- [struct moby-expected:list ()]
- [struct moby-expected:listof ([thing moby-expected?])]
- [struct moby-expected:vector ()]
- [struct moby-expected:struct ()]
- [struct moby-expected:box ()]
- [struct moby-expected:hash ()]
- [struct moby-expected:function ()]
- [struct moby-expected:something ([description string?])])
+ moby-expected?
+ [struct-out moby-expected:string]
+ [struct-out moby-expected:integer]
+ [struct-out moby-expected:natural]
+ [struct-out moby-expected:rational]
+ [struct-out moby-expected:real]
+ [struct-out moby-expected:complex]
+ [struct-out moby-expected:number]
+ [struct-out moby-expected:boolean] 
+ [struct-out moby-expected:char]
+ [struct-out moby-expected:symbol]
+ [struct-out moby-expected:list]
+ [struct-out moby-expected:listof]
+ [struct-out moby-expected:vector]
+ [struct-out moby-expected:struct]
+ [struct-out moby-expected:box]
+ [struct-out moby-expected:hash]
+ [struct-out moby-expected:function]
+ [struct-out moby-expected:something])

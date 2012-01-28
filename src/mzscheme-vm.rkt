@@ -240,16 +240,16 @@
     
     ;; (if test consequent alternative)
     [(stx-begins-with? expr 'if)
-     (local [(define test (second (stx-e expr)))
-             (define consequent (third (stx-e expr)))
-             (define alternative (fourth (stx-e expr)))]
-       (compile-if-expression test consequent alternative env a-pinfo))]
+     (define test (second (stx-e expr)))
+     (define consequent (third (stx-e expr)))
+     (define alternative (fourth (stx-e expr)))
+     (compile-if-expression test consequent alternative env a-pinfo)]
     
     
     ;; (begin ...)
     [(stx-begins-with? expr 'begin)
-     (local [(define exprs (rest (stx-e expr)))]
-       (compile-begin exprs env a-pinfo))]
+     (define exprs (rest (stx-e expr)))
+     (compile-begin exprs env a-pinfo)]
     
     
     ;; Identifiers
@@ -260,24 +260,24 @@
     
     ;; (lambda (args ...) body)
     [(stx-begins-with? expr 'lambda)
-     (local [(define args (stx-e (second (stx-e expr))))
-             (define body (third (stx-e expr)))]
-       (compile-lambda-expression empty args body env a-pinfo))]
+     (define args (stx-e (second (stx-e expr))))
+     (define body (third (stx-e expr)))
+     (compile-lambda-expression empty args body env a-pinfo)]
     
     
     ;; (local ([define ...] ...) body)
     [(stx-begins-with? expr 'local)
-     (local [(define defns (stx-e (second (stx-e expr))))
-             (define body (third (stx-e expr)))]
-       (compile-local-expression defns body env a-pinfo))]
+     (define defns (stx-e (second (stx-e expr))))
+     (define body (third (stx-e expr)))
+     (compile-local-expression defns body env a-pinfo)]
     
     
     ;; (set! identifier value)
     ;; Attention: it's evaluation doesn't produce an Object
     #;[(stx-begins-with? expr 'set!)
-       (local [(define id (second (stx-e expr)))
-               (define value (third (stx-e expr)))]
-         (set!-expression->javascript-string id value env a-pinfo))]
+       (define id (second (stx-e expr)))
+       (define value (third (stx-e expr)))
+       (set!-expression->javascript-string id value env a-pinfo)]
     
     
     ;; Quoted datums
@@ -287,13 +287,12 @@
     
     ;; Function call/primitive operation call
     [(pair? (stx-e expr))
-     (local [(define operator (first (stx-e expr)))
-             (define operands (rest (stx-e expr)))]
-       (compile-application-expression/stack-record (stx-loc expr)
-                                                    operator
-                                                    operands env a-pinfo))]
-    
-    
+     (define operator (first (stx-e expr)))
+     (define operands (rest (stx-e expr)))
+     (compile-application-expression/stack-record (stx-loc expr)
+                                                  operator
+                                                  operands env a-pinfo)]
+
     ;; Regular data are just themselves in the emitted bytecode.
     
     ;; Numbers
@@ -656,19 +655,19 @@
                      (cond
                        ;; (if test consequent alternative)
                        [(stx-begins-with? expr 'if)
-                        (local [(define test (second (stx-e expr)))
-                                (define consequent (third (stx-e expr)))
-                                (define alternative (fourth (stx-e expr)))]
-                          (append (loop test env)
-                                  (loop consequent env)
-                                  (loop alternative env)))]
+                        (define test (second (stx-e expr)))
+                        (define consequent (third (stx-e expr)))
+                        (define alternative (fourth (stx-e expr)))
+                        (append (loop test env)
+                                (loop consequent env)
+                                (loop alternative env))]
                        
                        
                        ;; (begin ...)
                        [(stx-begins-with? expr 'begin)
-                        (local [(define exprs (rest (stx-e expr)))]
-                          (apply append
-                                 (map (lambda (e) (loop e env)) exprs)))]
+                        (define exprs (rest (stx-e expr)))
+                        (apply append
+                               (map (lambda (e) (loop e env)) exprs))]
                        
                        
                        ;; Identifiers
@@ -684,32 +683,32 @@
                        
                        ;; (local ([define ...] ...) body)
                        [(stx-begins-with? expr 'local)
-                          (local [(define defns (stx-e (second (stx-e expr))))
-                                  (define body (third (stx-e expr)))] 
-                            ;; construct an updated environment, adding all the definitions
-                            ;; introduced by defns.
-                            ;; Also walk though each of the definitions and collect its free variables.
-                            (let* ([defined-names (collect-defined-names defns)]
-                                   [updated-env (foldl (lambda (id env)
-                                                         (env-push-local/boxed env (stx-e id)))
-                                                       env 
-                                                       (reverse defined-names))])
-                              (append 
-                               (loop body updated-env)
-                               (apply append (map (lambda (a-defn) 
-                                                    (case-analyze-definition a-defn
-                                                                             (lambda (id args body)
-                                                                               (loop body (foldl (lambda (id env)
-                                                                                                   (env-push-local env (stx-e id)))
-                                                                                                 updated-env
-                                                                                                 args)))
-                                                                             (lambda (id body)
-                                                                               (loop body updated-env))
-                                                                             (lambda (id fields)
-                                                                               empty)
-                                                                             (lambda (ids body)
-                                                                               (loop body updated-env))))
-                                                  defns)))))]
+                        (define defns (stx-e (second (stx-e expr))))
+                        (define body (third (stx-e expr)))
+                        ;; construct an updated environment, adding all the definitions
+                        ;; introduced by defns.
+                        ;; Also walk though each of the definitions and collect its free variables.
+                        (let* ([defined-names (collect-defined-names defns)]
+                               [updated-env (foldl (lambda (id env)
+                                                     (env-push-local/boxed env (stx-e id)))
+                                                   env 
+                                                   (reverse defined-names))])
+                          (append 
+                           (loop body updated-env)
+                           (apply append (map (lambda (a-defn) 
+                                                (case-analyze-definition a-defn
+                                                                         (lambda (id args body)
+                                                                           (loop body (foldl (lambda (id env)
+                                                                                               (env-push-local env (stx-e id)))
+                                                                                             updated-env
+                                                                                             args)))
+                                                                         (lambda (id body)
+                                                                           (loop body updated-env))
+                                                                         (lambda (id fields)
+                                                                           empty)
+                                                                         (lambda (ids body)
+                                                                           (loop body updated-env))))
+                                              defns))))]
                               
                               
 

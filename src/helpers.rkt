@@ -2,10 +2,7 @@
 
 (require "rbtree.rkt"
          "stx.rkt"
-         "error-struct.rkt"
-         racket/bool
-         racket/local
-         racket/contract)
+         "error-struct.rkt")
 
 
 ;; A program is a (listof (or/c defn? expr? library-require? provide-statement? require-permission?))
@@ -32,7 +29,7 @@
   (cond
     [(< (expression-type-number x)
         (expression-type-number y))
-     true]
+     #t]
     [(= (expression-type-number x)
         (expression-type-number y))
      (cond
@@ -51,16 +48,16 @@
         (cond
           [(< (length (stx-e x))
               (length (stx-e y)))
-           true]
+           #t]
           [(= (length (stx-e x))
               (length (stx-e y)))
            (ormap expression<? (stx-e x) (stx-e y))]
           [else
-           false])]
+           #f])]
        [(null? (stx-e x))
-        false])]
+        #f])]
     [else
-     false]))
+     #f]))
 
 
 ;; expression-type-number: expression -> number
@@ -112,13 +109,13 @@
 (define (defn? an-sexp)
   (cond
     [(stx-begins-with? an-sexp 'define)
-     true]
+     #t]
     [(stx-begins-with? an-sexp 'define-struct)
-     true]
+     #t]
     [(stx-begins-with? an-sexp 'define-values)
-     true]
+     #t]
     [else
-     false]))
+     #f]))
 
 
 ;; provide-statement?: stx -> boolean
@@ -157,22 +154,22 @@
 
 ;; string-split: string char -> (listof string)
 (define (string-split a-str delim)
-  (local [(define (add-word acc)
-            (list (cons (list->string (reverse (second acc)))
-                        (car acc))
-                  '()))
-          (define (accumulate-character acc ch)
-            (list (car acc)
-                  (cons ch (second acc))))]
-    (reverse (car
-              (add-word
-               (foldl (lambda (ch acc)
-                        (cond [(char=? ch delim)
-                               (add-word acc)]
-                              [else
-                               (accumulate-character acc ch)]))
-                      (list '() '())
-                      (string->list a-str)))))))
+  (define (add-word acc)
+    (list (cons (list->string (reverse (second acc)))
+                (car acc))
+          '()))
+  (define (accumulate-character acc ch)
+    (list (car acc)
+          (cons ch (second acc))))
+  (reverse (car
+            (add-word
+             (foldl (lambda (ch acc)
+                      (cond [(char=? ch delim)
+                             (add-word acc)]
+                            [else
+                             (accumulate-character acc ch)]))
+                    (list '() '())
+                    (string->list a-str))))))
 
 
 ;; test-case?: stx -> boolean
@@ -192,7 +189,7 @@
 ;; java-identifiers: (rbtreeof symbol boolean)
 (define java-identifiers
   (foldl (lambda (sym an-rbtree)
-           (rbtree-insert symbol< an-rbtree sym true))
+           (rbtree-insert symbol< an-rbtree sym #t))
          empty-rbtree
          
          '(abstract  continue  	for  	new  	switch
@@ -252,19 +249,19 @@
     [(pair? (rbtree-lookup symbol< java-identifiers an-id))
      (string->symbol (string-append "_" (symbol->string an-id) "_"))]
     [else
-     (local [(define (maybe-prepend-hyphen chars)
-               (cond
-                 [(member (car chars) (string->list "0123456789"))
-                  (cons #\- chars)]
-                 [else
-                  chars]))
-             (define chars (maybe-prepend-hyphen (string->list (symbol->string an-id))))
-             (define translated-chunks 
-               (map translate-special-character chars))
-             (define translated-id
-               (string->symbol
-                (string-join translated-chunks "")))]
-       translated-id)]))
+     (define (maybe-prepend-hyphen chars)
+       (cond
+         [(member (car chars) (string->list "0123456789"))
+          (cons #\- chars)]
+         [else
+          chars]))
+     (define chars (maybe-prepend-hyphen (string->list (symbol->string an-id))))
+     (define translated-chunks 
+       (map translate-special-character chars))
+     (define translated-id
+       (string->symbol
+        (string-join translated-chunks "")))
+     translated-id]))
 
 
 
@@ -340,12 +337,12 @@
     [(and (stx-begins-with? a-definition 'define)
           (= (length (stx-e a-definition)) 3)
           (stx-list-of-symbols? (second (stx-e a-definition))))
-     (local [(define id (car (stx-e (second (stx-e a-definition)))))
-             (define args (cdr (stx-e (second (stx-e a-definition)))))
-             (define body (third (stx-e a-definition)))]
-       (begin
-         (check-single-body-stx! (cdr (cdr (stx-e a-definition))) a-definition)
-         (f-function id args body)))]
+     (define id (car (stx-e (second (stx-e a-definition)))))
+     (define args (cdr (stx-e (second (stx-e a-definition)))))
+     (define body (third (stx-e a-definition)))
+     (begin
+       (check-single-body-stx! (cdr (cdr (stx-e a-definition))) a-definition)
+       (f-function id args body))]
     
     
     ;; (define id (lambda (args ...) body))
@@ -353,21 +350,21 @@
           (= (length (stx-e a-definition)) 3)
           (symbol? (stx-e (second (stx-e a-definition))))
           (stx-begins-with? (third (stx-e a-definition)) 'lambda))
-     (local [(define id (second (stx-e a-definition)))
-             (define args (stx-e (second (stx-e (third (stx-e a-definition))))))
-             (define body (third (stx-e (third (stx-e a-definition)))))]
-       (begin
-         (check-single-body-stx! (cdr (cdr (stx-e (third (stx-e a-definition))))) a-definition)
-         (f-function id args body)))]
+     (define id (second (stx-e a-definition)))
+     (define args (stx-e (second (stx-e (third (stx-e a-definition))))))
+     (define body (third (stx-e (third (stx-e a-definition)))))
+     (begin
+       (check-single-body-stx! (cdr (cdr (stx-e (third (stx-e a-definition))))) a-definition)
+       (f-function id args body))]
     
     ;; (define id body)
     [(and (stx-begins-with? a-definition 'define)
           (= (length (stx-e a-definition)) 3)
           (symbol? (stx-e (second (stx-e a-definition))))
           (not (stx-begins-with? (third (stx-e a-definition)) 'lambda)))
-     (local [(define id (second (stx-e a-definition)))
-             (define body (third (stx-e a-definition)))]
-       (f-regular-definition id body))]
+     (define id (second (stx-e a-definition)))
+     (define body (third (stx-e a-definition)))
+     (f-regular-definition id body)]
     
     ;(define-struct id (fields ...))    
     [(and (stx-begins-with? a-definition 'define-struct)
@@ -375,18 +372,17 @@
           (symbol? (stx-e (second (stx-e a-definition))))
           (or (null? (stx-e (third (stx-e a-definition))))
               (pair? (stx-e (third (stx-e a-definition))))))
-     (local [(define id (second (stx-e a-definition)))
-             (define fields (stx-e (third (stx-e a-definition))))]
-       (f-define-struct id fields))]
+     (define id (second (stx-e a-definition)))
+     (define fields (stx-e (third (stx-e a-definition))))
+     (f-define-struct id fields)]
     
     ;; (define-values (id ...) body)
     [(and (stx-begins-with? a-definition 'define-values)
           (= (length (stx-e a-definition)) 3)
           (stx-list-of-symbols? (second (stx-e a-definition))))
-     (local [(define ids (stx-e (second (stx-e a-definition))))
-             (define body (third (stx-e a-definition)))]
-       (f-define-values ids body))]
-    
+     (define ids (stx-e (second (stx-e a-definition))))
+     (define body (third (stx-e a-definition)))
+     (f-define-values ids body)]
     
     
     ;; FIXME: add more error productions as necessary to get
@@ -430,26 +426,26 @@
 ;; Return a list of the identifiers that are duplicated.
 ;; Also check to see that each of the ids is really a symbolic identifier.
 (define (check-duplicate-identifiers! ids)
-  (local [(define seen-ids (make-hash))
-          
-          (define (loop ids)
-            (cond
-              [(null? ids)
-               (void)]
-              [else
-               (cond [(stx? (hash-ref seen-ids (stx-e (car ids)) #f))
-                      (raise (make-moby-error (stx-loc (car ids))
-                                              (make-moby-error-type:duplicate-identifier
-                                               (stx-e (car ids))
-                                               (stx-loc (hash-ref seen-ids (stx-e (car ids)) #f)))))]
-                     [(not (symbol? (stx-e (car ids))))
-                      (raise (make-moby-error (stx-loc (car ids))
-                                              (make-moby-error-type:expected-identifier (car ids))))]
-                     [else
-                      (begin
-                        (hash-set! seen-ids (stx-e (car ids)) (car ids))
-                        (loop (cdr ids)))])]))]
-    (loop ids)))
+  (define seen-ids (make-hash))
+  
+  (define (loop ids)
+    (cond
+      [(null? ids)
+       (void)]
+      [else
+       (cond [(stx? (hash-ref seen-ids (stx-e (car ids)) #f))
+              (raise (make-moby-error (stx-loc (car ids))
+                                      (make-moby-error-type:duplicate-identifier
+                                       (stx-e (car ids))
+                                       (stx-loc (hash-ref seen-ids (stx-e (car ids)) #f)))))]
+             [(not (symbol? (stx-e (car ids))))
+              (raise (make-moby-error (stx-loc (car ids))
+                                      (make-moby-error-type:expected-identifier (car ids))))]
+             [else
+              (begin
+                (hash-set! seen-ids (stx-e (car ids)) (car ids))
+                (loop (cdr ids)))])]))
+  (loop ids))
 
 
 
@@ -474,44 +470,38 @@
 
 ;; mapi: (X number -> Y) (listof X) -> (listof Y)
 (define (mapi f lst)
-  (local ([define (loop lst i)
-            
-            (cond
-              [(null? lst)
-               '()]
-              [else
-               (cons (f (car lst) i)
-                     (loop (cdr lst) (add1 i)))])])
-    (loop lst 0)))
+  (define (loop lst i)
+    
+    (cond
+      [(null? lst)
+       '()]
+      [else
+       (cons (f (car lst) i)
+             (loop (cdr lst) (add1 i)))]))
+  (loop lst 0))
 
 
-(provide/contract [symbol< (symbol? symbol? . -> . boolean?)]
-                  [mapi ((any/c number? . -> . any/c) (listof any/c) . -> . (listof any/c))]
-                  [program? (any/c . -> . boolean?)]
-                  [expression? (any/c . -> . boolean?)]
-                  [defn? (any/c . -> . boolean?)]
-                  [test-case? (any/c . -> . boolean?)]
-                  [require-permission? (any/c . -> . boolean?)]
-                  [library-require? (any/c . -> . boolean?)]
-                  [provide-statement? (any/c . -> . boolean?)]
-                  [take ((listof any/c) number? . -> . (listof any/c))]
-                  [list-tail ((listof any/c) number? . -> . (listof any/c))]
+(provide symbol< 
+         mapi
+         program?
+         expression?
+         defn?
+         test-case?
+         require-permission?
+         library-require?
+         provide-statement?
+         take
+         list-tail
                   
-                  [expression<? (expression? expression? . -> . boolean?)]
+         expression<?
                   
-                  [remove-leading-whitespace (string? . -> . string?)]
-                  [identifier->munged-java-identifier (symbol? . -> . symbol?)]
-                  [range (number? . -> . (listof number?))]
-                  
-                  
-                  [check-duplicate-identifiers! ((listof stx?)  . -> . any)]
-                  
-                  [check-single-body-stx! ((listof stx?) stx? . -> . any)]
-                  [case-analyze-definition (stx? 
-                                            (symbol-stx? (listof symbol-stx?) stx? . -> . any)
-                                            (symbol-stx? any/c . -> . any)
-                                            (symbol-stx? (listof symbol-stx?) . -> . any)
-                                            ((listof symbol-stx?) stx? . -> . any)
-                                            . -> . any)]
-                  [string-join ((listof string?) string? . -> . string?)]
-                  [string-split (string? char? . -> . (listof string?))])
+         remove-leading-whitespace
+         identifier->munged-java-identifier
+         range
+
+         check-duplicate-identifiers!
+         
+         check-single-body-stx!
+         case-analyze-definition
+         string-join
+         string-split)

@@ -13,9 +13,7 @@
 (require "env.rkt"
          "helpers.rkt"
          "permission-struct.rkt"
-         "binding.rkt"
-         racket/local
-         racket/contract)
+         "binding.rkt")
 
 (define false #f)
 (define true #t)
@@ -80,13 +78,14 @@
 ;; FIXME: this should not be here; it should be read off runtime-bindings.ss
 ;; We need to attach the permissions properly from the scheme source.
 (define world-effects-module 
-  (local [;; bf: symbol path number boolean string -> binding:function
-          ;; Helper function.
-          (define (bf name module-path arity vararity?)
-            (make-binding:function name module-path arity vararity? empty false))
-          
-          (define module-path 
-            "moby/world-effects")]
+  ;; bf: symbol path number boolean string -> binding:function
+  ;; Helper function.
+  (let ()
+    (define (bf name module-path arity vararity?)
+      (make-binding:function name module-path arity vararity? empty false))
+    
+    (define module-path 
+      "moby/world-effects")
     (make-module-binding 'world-effects
                          module-path
                          (list (bf 'make-effect:none module-path 0
@@ -140,12 +139,13 @@
 
 
 (define world-handlers-module 
-  (local [;; bf: symbol path number boolean string -> binding:function
-          ;; Helper function.
-          (define (bf name module-path arity vararity?)
-            (make-binding:function name module-path arity vararity? empty false))
-          (define module-path 
-            "moby/world-handlers")]
+  (let ()
+    ;; bf: symbol path number boolean string -> binding:function
+    ;; Helper function.
+    (define (bf name module-path arity vararity?)
+      (make-binding:function name module-path arity vararity? empty false))
+    (define module-path 
+      "moby/world-handlers")
     (make-module-binding 'world-config
                          module-path
                          (list (bf 'on-tick module-path 1 true)
@@ -163,52 +163,52 @@
                                #;(bf 'on-announce! module-path 2 false)
                                
                                #;(make-binding:function
-                                'on-location-change module-path 1 false
-                                (list PERMISSION:LOCATION)
-                                false)
+                                  'on-location-change module-path 1 false
+                                  (list PERMISSION:LOCATION)
+                                  false)
                                #;(make-binding:function
-                                'on-location-change! module-path 2 false
-                                (list PERMISSION:LOCATION)
-                                false)
+                                  'on-location-change! module-path 2 false
+                                  (list PERMISSION:LOCATION)
+                                  false)
                                
                                #;(make-binding:function
-                                'on-tilt module-path 1 false
-                                (list PERMISSION:TILT)
-                                false)
+                                  'on-tilt module-path 1 false
+                                  (list PERMISSION:TILT)
+                                  false)
                                #;(make-binding:function
-                                'on-tilt! module-path 2 false
-                                (list PERMISSION:TILT)
-                                false)
+                                  'on-tilt! module-path 2 false
+                                  (list PERMISSION:TILT)
+                                  false)
                                
                                #;(make-binding:function
-                                'on-acceleration module-path 1 false
-                                (list PERMISSION:TILT)
-                                false)
+                                  'on-acceleration module-path 1 false
+                                  (list PERMISSION:TILT)
+                                  false)
                                
                                #;(make-binding:function
-                                'on-acceleration! module-path 2 false
-                                (list PERMISSION:TILT)
-                                false)
+                                  'on-acceleration! module-path 2 false
+                                  (list PERMISSION:TILT)
+                                  false)
                                
                                #;(make-binding:function
-                                'on-sms-receive module-path 1 false
-                                (list PERMISSION:RECEIVE-SMS)
-                                false)
+                                  'on-sms-receive module-path 1 false
+                                  (list PERMISSION:RECEIVE-SMS)
+                                  false)
                                
                                #;(make-binding:function
-                                'on-sms-receive* module-path 1 false
-                                (list PERMISSION:RECEIVE-SMS)
-                                false)
+                                  'on-sms-receive* module-path 1 false
+                                  (list PERMISSION:RECEIVE-SMS)
+                                  false)
                                
                                #;(make-binding:function
-                                'on-shake module-path 1 false
-                                (list PERMISSION:SHAKE)
-                                false)
+                                  'on-shake module-path 1 false
+                                  (list PERMISSION:SHAKE)
+                                  false)
                                
                                #;(make-binding:function
-                                'on-shake! module-path 2 false
-                                (list PERMISSION:SHAKE)
-                                false)
+                                  'on-shake! module-path 2 false
+                                  (list PERMISSION:SHAKE)
+                                  false)
                                
                                ;; old style
                                (bf 'on-redraw module-path 1 false)
@@ -225,113 +225,111 @@
 
 
 (define (make-world-module module-path)
-  (local [;; bf: symbol path number boolean string -> binding:function
-          ;; Helper function.
-          (define (bf name)
-            (make-binding:constant name module-path 
-                                   (if (member name '(video-url
-                                                      bitmap/url
-                                                      image-url
-                                                      open-image-url))
-                                       (list PERMISSION:INTERNET)
-                                       empty)))]
-   (make-module-binding 'world
+  (let ()
+    ;; bf: symbol path number boolean string -> binding:function
+    ;; Helper function.
+    (define (bf name)
+      (make-binding:constant name module-path 
+                             (if (member name '(video-url
+                                                bitmap/url
+                                                image-url
+                                                open-image-url))
+                                 (list PERMISSION:INTERNET)
+                                 empty)))
+    (make-module-binding 'world
                          module-path
                          (append (module-binding-bindings world-handlers-module)
                                  (module-binding-bindings world-effects-module)
                                  (map bf '(key=?
-					   
-					   big-bang
-                                       
-					   make-color
-					   color-red
-					   color-green
-					   color-blue
-					   empty-scene
-					   scene+line
-					   place-image
-					   place-image/align
-					   put-pinhole
-					   circle
-					   star
-					   radial-star
-					   star-polygon
-					   nw:rectangle
-					   rectangle
-					   regular-polygon
-					   rhombus
-					   square
-					   triangle
-					   right-triangle
-					   isosceles-triangle
-					   ellipse
-					   line
-					   add-line
-					   overlay
-					   overlay/xy
-					   overlay/align
-					   underlay
-					   underlay/xy
-					   underlay/align
-					   beside
-					   beside/align
-					   above
-					   above/align
-					   rotate
-					   scale
-					   scale/xy
-					   crop
-					   frame
-					   flip-horizontal
-					   flip-vertical
-					   text
-					   text/font
-					   video-url  ;; needs network
-					   bitmap/url ;; needs network
-					   image-url  ;; needs network
-					   open-image-url  ;; needs network
-					   image?
-					   image=?
-					   image-width
-					   image-height
-					   
-					   image->color-list
-					   color-list->image
-					   
-					   image-baseline
-					   mode?
-					   image-color?
-					   x-place?
-					   y-place?
-					   angle?
-					   side-count?
-					   step-count?
-					   ))))))
+                                           
+                                           big-bang
+                                           
+                                           make-color
+                                           color-red
+                                           color-green
+                                           color-blue
+                                           empty-scene
+                                           scene+line
+                                           place-image
+                                           place-image/align
+                                           put-pinhole
+                                           circle
+                                           star
+                                           radial-star
+                                           star-polygon
+                                           nw:rectangle
+                                           rectangle
+                                           regular-polygon
+                                           rhombus
+                                           square
+                                           triangle
+                                           right-triangle
+                                           isosceles-triangle
+                                           ellipse
+                                           line
+                                           add-line
+                                           overlay
+                                           overlay/xy
+                                           overlay/align
+                                           underlay
+                                           underlay/xy
+                                           underlay/align
+                                           beside
+                                           beside/align
+                                           above
+                                           above/align
+                                           rotate
+                                           scale
+                                           scale/xy
+                                           crop
+                                           frame
+                                           flip-horizontal
+                                           flip-vertical
+                                           text
+                                           text/font
+                                           video-url  ;; needs network
+                                           bitmap/url ;; needs network
+                                           image-url  ;; needs network
+                                           open-image-url  ;; needs network
+                                           image?
+                                           image=?
+                                           image-width
+                                           image-height
+                                           
+                                           image->color-list
+                                           color-list->image
+                                           
+                                           image-baseline
+                                           mode?
+                                           image-color?
+                                           x-place?
+                                           y-place?
+                                           angle?
+                                           side-count?
+                                           step-count?
+                                           ))))))
 
 
 ;; world teachpack bindings
 (define world-module 
-  (local [(define module-path
-            "moby/world")]
-    (make-world-module module-path)))
+  (make-world-module "moby/world"))
 
 
 ;; Alternative world teachpack bindings
 (define world-stub-module
-  (local [(define module-path                       
-            "moby/world")]
-    (make-world-module module-path)))
+  (make-world-module "moby/world"))
 
 
 ;; Bootstrap bindings
 (define bootstrap-teachpack
-  (local [;; bf: symbol path number boolean string -> binding:function
-          ;; Helper function.
-          (define (bf name module-path arity vararity?)
-            (make-binding:function name module-path arity vararity? empty false))
-          (define module-path
-            "bootstrap/bootstrap-teachpack")
-          ]
+  (let ()
+    ;; bf: symbol path number boolean string -> binding:function
+    ;; Helper function.
+    (define (bf name module-path arity vararity?)
+      (make-binding:function name module-path arity vararity? empty false))
+    (define module-path
+      "bootstrap/bootstrap-teachpack")
+    
     (make-module-binding 'bootstrap/bootstrap-teachpack
                          module-path
                          (list 
@@ -344,12 +342,13 @@
 
 ;; Cage teachpack
 (define cage-teachpack
-  (local [;; bf: symbol path number boolean string -> binding:function
-          ;; Helper function.
-          (define (bf name module-path arity vararity?)
-            (make-binding:function name module-path arity vararity? empty false))
-          (define module-path
-            "bootstrap/cage-teachpack")]
+  (let () 
+    ;; bf: symbol path number boolean string -> binding:function
+    ;; Helper function.
+    (define (bf name module-path arity vararity?)
+      (make-binding:function name module-path arity vararity? empty false))
+    (define module-path
+      "bootstrap/cage-teachpack")
     (make-module-binding 'bootstrap/cage-teachpack
                          module-path
                          (list 
@@ -357,13 +356,14 @@
 
 ;; Function teachpack
 (define function-teachpack
-  (local [;; bf: symbol path number boolean string -> binding:function
-          ;; Helper function.
-          (define (bf name module-path arity vararity?)
-            (make-binding:function name module-path arity vararity? empty false))
-          (define module-path
-            "bootstrap/function-teachpack")
-          ]
+  (let ()
+    ;; bf: symbol path number boolean string -> binding:function
+    ;; Helper function.
+    (define (bf name module-path arity vararity?)
+      (make-binding:function name module-path arity vararity? empty false))
+    (define module-path
+      "bootstrap/function-teachpack")
+    
     (make-module-binding 'bootstrap/function-teachpack
                          module-path
                          (list 
@@ -375,13 +375,14 @@
 
 ;; location library
 (define location-module 
-  (local [(define module-path
-            "moby/geolocation")
-          
-          (define (bf name module-path arity vararity?)
-            (make-binding:function name module-path arity vararity?
-                                   (list PERMISSION:LOCATION)
-                                   false))]
+  (let ()
+    (define module-path
+      "moby/geolocation")
+    
+    (define (bf name module-path arity vararity?)
+      (make-binding:function name module-path arity vararity?
+                             (list PERMISSION:LOCATION)
+                             false))
     (make-module-binding 'location
                          module-path
                          (list (bf 'get-latitude module-path 0 false)
@@ -394,13 +395,14 @@
 
 ;; accelerometer library
 (define tilt-module 
-  (local [(define module-path 
-            "moby/tilt")
-          
-          (define (bf name arity vararity?)
-            (make-binding:function name module-path arity vararity?
-                                   (list PERMISSION:TILT)
-                                   true))]
+  (let ()
+    (define module-path 
+      "moby/tilt")
+    
+    (define (bf name arity vararity?)
+      (make-binding:function name module-path arity vararity?
+                             (list PERMISSION:TILT)
+                             true))
     (make-module-binding 'tilt
                          module-path
                          (list (bf 'get-x-acceleration 0 false)
@@ -416,8 +418,9 @@
 
 
 (define telephony-module
-  (local [(define module-path
-            "moby/telephony")]
+  (let ()
+    (define module-path
+      "moby/telephony")
     
     (make-module-binding 'telephony
                          module-path
@@ -433,8 +436,9 @@
 
 
 (define net-module
-  (local [(define module-path
-            "moby/net")]
+  (let ()
+    (define module-path
+      "moby/net")
     
     (make-module-binding 'net
                          module-path
@@ -446,8 +450,9 @@
                                                       false)))))
 
 (define parser-module
-  (local [(define module-path
-            "moby/parser")]
+  (let ()
+    (define module-path
+      "moby/parser")
     
     (make-module-binding 'parser
                          module-path
@@ -459,11 +464,12 @@
                                                       false)))))
 
 (define jsworld-module
-  (local [(define module-path
-            "moby/jsworld")
-          
-          (define (bf name arity)
-            (make-binding:function name module-path arity true empty false))]
+  (let ()
+    (define module-path
+      "moby/jsworld")
+    
+    (define (bf name arity)
+      (make-binding:function name module-path arity true empty false))
     (make-module-binding 'jsworld
                          module-path
                          (list (make-binding:function 
@@ -473,7 +479,7 @@
                                 true
                                 empty
                                 false)
-			       (make-binding:function 
+                               (make-binding:function 
                                 'big-bang
                                 module-path
                                 1
@@ -497,16 +503,16 @@
                                (bf 'js-button 1)
                                (bf 'js-button! 2)
                                (bf 'js-input 2)
-
-			       #;(bf 'empty-page 0)
-			       #;(make-binding:function 'place-on-page
-						      module-path
-						      4
-						      false
-						      (list)
-						      false)
-
-
+                               
+                               #;(bf 'empty-page 0)
+                               #;(make-binding:function 'place-on-page
+                                                        module-path
+                                                        4
+                                                        false
+                                                        (list)
+                                                        false)
+                               
+                               
                                (make-binding:function 'js-img module-path 1 true 
                                                       (list PERMISSION:INTERNET) 
                                                       false)
@@ -524,13 +530,14 @@
 ;; extend-env/module-binding: env module-binding -> env
 ;; Extends an environment with the bindings associated to a module.
 (define (extend-env/module-binding an-env a-module-binding)
-  (local [(define (loop an-env contents)
-            (cond
-              [(empty? contents)
-               an-env]
-              [else
-               (loop (env-extend an-env (first contents))
-                     (rest contents))]))]
+  (let () 
+    (define (loop an-env contents)
+      (cond
+        [(empty? contents)
+         an-env]
+        [else
+         (loop (env-extend an-env (first contents))
+               (rest contents))]))
     (loop an-env (module-binding-bindings a-module-binding))))
 
 
@@ -596,15 +603,16 @@
 ;; default-module-resolver: symbol -> (module-binding | false)
 ;; Provides a default module resolver.
 (define (default-module-resolver a-name)
-  (local [(define (loop modules)
-            (cond
-              [(empty? modules)
-               false]
-              [(eq? (module-binding-name (first modules))
-                    a-name)
-               (first modules)]
-              [else
-               (loop (rest modules))]))]
+  (let ()
+    (define (loop modules)
+      (cond
+        [(empty? modules)
+         false]
+        [(eq? (module-binding-name (first modules))
+              a-name)
+         (first modules)]
+        [else
+         (loop (rest modules))]))
     (loop known-modules)))
 
 
@@ -612,83 +620,79 @@
 ;; default-module-path-resolver: module-path module-path -> module-name
 (define (default-module-path-resolver a-module-path parent-module-path)
   #;(printf "looking for ~s, among ~s~n"
-          a-module-path
-          (map (lambda (a-module) (module-binding-name a-module)) known-modules))
-  (local [(define (loop modules)
-            (cond
-              [(empty? modules)
-               (cond
-                 [(symbol? a-module-path)
-                  a-module-path]
-                 [(string? a-module-path)
-                  (string->symbol 
-                   (module-path-join parent-module-path a-module-path))])]
-              [(module-path=? (module-path-join parent-module-path a-module-path)
-                              (module-binding-source (first modules)))
-               (module-binding-name (first modules))]
-              [else
-               (loop (rest modules))]))]
+            a-module-path
+            (map (lambda (a-module) (module-binding-name a-module)) known-modules))
+  (let ()(define (loop modules)
+           (cond
+             [(empty? modules)
+              (cond
+                [(symbol? a-module-path)
+                 a-module-path]
+                [(string? a-module-path)
+                 (string->symbol 
+                  (module-path-join parent-module-path a-module-path))])]
+             [(module-path=? (module-path-join parent-module-path a-module-path)
+                             (module-binding-source (first modules)))
+              (module-binding-name (first modules))]
+             [else
+              (loop (rest modules))]))
     (loop known-modules)))
 
 
 
 ;; module-path-join: module-path module-path -> module-path
 (define (module-path-join p1 p2)
-  (local [(define (looks-like-relative-path? p)
-            (and (string? p)
-                 (> (string-length p) 0)
-                 (not (char=? (string-ref p 0) #\/))))
-          
-          ;; take all but the last element of the list.
-          (define (butlast l)
-            (reverse (rest (reverse l))))
-          
-          (define (path-only p)
-            (string-join (butlast (path-split p))
-                         "/"))
-          
-          (define (path-split p)
-            (string-split p #\/))
-          
-          (define (path-simplify p)
-            (local [(define (loop current-chunks pieces)
-                      (cond
-                        [(empty? pieces)
-                         (string-join (reverse current-chunks) "/")]
-                        [(string=? (first pieces) "..")
-                         (cond
-                           [(empty? current-chunks)
-                            (loop (cons (first pieces) current-chunks)
-                                  (rest pieces))]
-                           [else
-                            (loop (rest current-chunks) (rest pieces))])]
-                        [else
-                         (loop (cons (first pieces) current-chunks)
-                               (rest pieces))]))]
-              (loop empty (path-split p))))]
-    (cond
-      [(symbol? p2)
-       p2]
-      [(string? p2)
-       (cond
-         [(and (string? p1)
-               (looks-like-relative-path? p2))
-          (if (string=? (path-only p1) "")
-              p2
-              (path-simplify
-               (string-append (path-only p1)
-                              "/"
-                              p2)))]
-         [else
-          (path-simplify p2)])])))
+  (define (looks-like-relative-path? p)
+    (and (string? p)
+         (> (string-length p) 0)
+         (not (char=? (string-ref p 0) #\/))))
+  
+  ;; take all but the last element of the list.
+  (define (butlast l)
+    (reverse (rest (reverse l))))
+  
+  (define (path-only p)
+    (string-join (butlast (path-split p))
+                 "/"))
+  
+  (define (path-split p)
+    (string-split p #\/))
+  
+  (define (path-simplify p)
+    (define (loop current-chunks pieces)
+      (cond
+        [(empty? pieces)
+         (string-join (reverse current-chunks) "/")]
+        [(string=? (first pieces) "..")
+         (cond
+           [(empty? current-chunks)
+            (loop (cons (first pieces) current-chunks)
+                  (rest pieces))]
+           [else
+            (loop (rest current-chunks) (rest pieces))])]
+        [else
+         (loop (cons (first pieces) current-chunks)
+               (rest pieces))]))
+    (loop empty (path-split p)))
+  (cond
+    [(symbol? p2)
+     p2]
+    [(string? p2)
+     (cond
+       [(and (string? p1)
+             (looks-like-relative-path? p2))
+        (if (string=? (path-only p1) "")
+            p2
+            (path-simplify
+             (string-append (path-only p1)
+                            "/"
+                            p2)))]
+       [else
+        (path-simplify p2)])]))
 
 
-
-
-
-(provide/contract [extend-env/module-binding 
-                   (env? module-binding? . -> . env?)]
-                  [moby-module-binding module-binding?]
-                  [default-module-resolver (module-name? . -> . (or/c module-binding? false/c))]
-                  [default-module-path-resolver (module-path? module-path? . -> . (or/c module-name? false/c))]
-                  [module-path-join (module-path? module-path? . -> . module-path?)])
+(provide extend-env/module-binding 
+         moby-module-binding
+         default-module-resolver
+         default-module-path-resolver
+         module-path-join)
